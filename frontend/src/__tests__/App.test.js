@@ -1,10 +1,16 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { test, expect } from "@jest/globals";
-import App from "./App";
+import App from "../App";
 
-test("renders welcome message", () => {
+test("renders header", () => {
   render(<App />);
-  const linkElement = screen.getByText(/Bienvenue dans AnalyseIt/i);
-  expect(linkElement).toBeInTheDocument();
+  const headerElement = screen.getByText(/AnalyseIt - Frontend/i);
+  expect(headerElement).toBeInTheDocument();
+});
+
+test("renders API status", () => {
+  render(<App />);
+  const statusElement = screen.getByText(/API Status:/i);
+  expect(statusElement).toBeInTheDocument();
 });

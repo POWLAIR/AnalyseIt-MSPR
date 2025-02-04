@@ -1,12 +1,16 @@
+from fastapi.testclient import TestClient
 import sys
 from pathlib import Path
+
+
+# Add backend directory to Python path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from fastapi.testclient import TestClient
-from main import app
+from main import app  # noqa: E402
 
-# Create test client with the correct syntax for recent versions
+
 client = TestClient(app)
+
 
 def test_healthcheck():
     response = client.get("/healthcheck")
