@@ -1,6 +1,11 @@
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+
 from fastapi.testclient import TestClient
 from main import app
 
+# Create test client with the correct syntax for recent versions
 client = TestClient(app)
 
 def test_healthcheck():

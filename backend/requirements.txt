@@ -1,7 +1,9 @@
-fastapi
+fastapi==0.104.1
 uvicorn
 sqlalchemy
 pymysql
 python-dotenv
 flake8
-pytest
+pytest==7.4.3
+httpx==0.25.0
+starlette==0.27.0
