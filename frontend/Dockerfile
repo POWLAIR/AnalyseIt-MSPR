@@ -10,6 +10,9 @@ COPY package.json package-lock.json ./
 # Installer les dépendances (avec cache Docker si les fichiers de dépendances n'ont pas changé)
 RUN npm install
 
+# Copier le fichier .env
+COPY .env ./
+
 # Copier le reste du code source
 COPY . .
 

@@ -1,14 +1,23 @@
 # Node.js
 node_modules/
-npm-debug.log
+npm-debug.log*
+
+# React build files
+build/
+.DS_Store
 
 # Python
 __pycache__/
 *.pyc
 *.pyo
-venv/
+*.pyd
 .env
+venv/
 
 # Docker
 *.log
 docker-compose.override.yml
+
+# Tests
+coverage/
+*.cover
