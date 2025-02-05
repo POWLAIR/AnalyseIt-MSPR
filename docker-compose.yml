@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   mysql:
-    image: mysql:latest
+    image: mysql:8.0
     container_name: mysql_db
     restart: always
     environment:
@@ -20,22 +20,33 @@ services:
   backend:
     build:
       context: ./backend
+    container_name: backend
+    restart: always
     ports:
       - "8000:8000"
+    environment:
+      DATABASE_URL: mysql://user:password@mysql:3306/pandemics_db
     volumes:
       - ./backend:/app
-    command: ["python", "main.py"]
+    depends_on:
+      - mysql
+    networks:
+      - app_network
 
   frontend:
     build:
       context: ./frontend
+    container_name: frontend
+    restart: always
     ports:
       - "3000:3000"
-    volumes:
-      - ./frontend:/app
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-    
+      NEXT_PUBLIC_API_URL: http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - app_network
+
 volumes:
   mysql_data:
 

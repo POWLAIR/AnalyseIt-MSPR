@@ -1,4 +1,4 @@
-# Utilisation d’une image Python légère
+# Utiliser une image Python légère
 FROM python:3.12-slim
 
 # Définir le dossier de travail
