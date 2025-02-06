@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 
 const TestButton = () => {
@@ -11,7 +13,7 @@ const TestButton = () => {
       const data = await res.json();
       setResponse(data.message);
     } catch (error) {
-      setResponse("Erreur de connexion au backend");
+      setResponse("Erreur de connexion au backend : " + error);
     }
   };
 
