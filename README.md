@@ -3,6 +3,7 @@
 Cette plateforme est conçue pour collecter, nettoyer, analyser et visualiser les données sur les pandémies. Elle utilise une architecture basée sur **Docker**, avec un backend en **FastAPI**, un frontend en **Next.js**, et une base de données **MySQL**.
 
 ## **Fonctionnalités principales**
+
 - **Backend** : API REST utilisant FastAPI, connectée à une base de données MySQL pour gérer les données des pandémies.
 - **Frontend** : Interface utilisateur interactive en Next.js avec Tailwind CSS pour les styles.
 - **Base de données** : Stockage des données relationnelles avec MySQL.
@@ -44,24 +45,31 @@ docker-compose.yml          # Configuration des services Docker
 ---
 
 ## **Prérequis**
+
 Avant de commencer, assurez-vous d'avoir installé :
+
 - [Docker](https://www.docker.com/)
 - [Docker Compose](https://docs.docker.com/compose/)
+- [Git Bash](https://git-scm.com/downloads/win)
 
 ---
 
 ## **Installation**
 
 1. Clonez le dépôt :
+
    ```bash
    git clone <URL_DU_DEPOT>
    cd pandemic-analysis-platform
    ```
 
 2. Construisez et démarrez les conteneurs Docker :
-   ```bash
-   docker-compose up --build
-   ```
+
+Au sein d'un terminal git bash, exécutez la commande suivante :
+
+```bash
+docker-compose --verbose up --build --no-cache
+```
 
 3. Les services seront accessibles aux ports suivants :
    - **Backend** : [http://localhost:8000](http://localhost:8000)
@@ -73,6 +81,7 @@ Avant de commencer, assurez-vous d'avoir installé :
 ## **Commandes utiles**
 
 ### Backend
+
 - Accéder au conteneur backend :
   ```bash
   docker exec -it backend bash
@@ -83,6 +92,7 @@ Avant de commencer, assurez-vous d'avoir installé :
   ```
 
 ### Frontend
+
 - Installer une nouvelle dépendance Node.js :
   ```bash
   docker exec -it frontend bash
@@ -90,6 +100,7 @@ Avant de commencer, assurez-vous d'avoir installé :
   ```
 
 ### Général
+
 - Redémarrer les conteneurs :
   ```bash
   docker-compose down
@@ -101,7 +112,9 @@ Avant de commencer, assurez-vous d'avoir installé :
 ## **Tests**
 
 ### Backend
+
 Pour exécuter les tests du backend, utilisez :
+
 ```bash
 docker exec -it backend pytest
 ```
@@ -120,5 +133,5 @@ docker exec -it backend pytest
 ---
 
 ## **Licence**
-Ce projet est sous licence **MIT**.
 
+Ce projet est sous licence **MIT**.
