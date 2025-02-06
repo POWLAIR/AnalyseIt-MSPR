@@ -7,3 +7,4 @@ flake8
 pytest==7.4.3
 httpx==0.25.0
 starlette==0.27.0
+cryptography

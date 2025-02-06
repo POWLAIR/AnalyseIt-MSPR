@@ -4,4 +4,6 @@ const nextConfig: NextConfig = {
   /* Ajoutez vos options ici */
 };
 
+module.exports = nextConfig;
+
 export default nextConfig;

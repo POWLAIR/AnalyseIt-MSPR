@@ -63,7 +63,23 @@ Avant de commencer, assurez-vous d'avoir installé :
    cd pandemic-analysis-platform
    ```
 
-2. Construisez et démarrez les conteneurs Docker :
+2. Configuration de l'environnement :
+
+- Créez un fichier `.env.local` dans le dossier `frontend` avec les variables d'environnement suivantes :
+
+  ```bash
+  cd frontend
+  cp .env.example .env.local
+  ```
+
+  - Copiez le fichier `.env.example` dans le dossier `backend` pour créer votre configuration :
+
+  ```bash
+  cd backend
+  cp .env.example .env
+  ```
+
+3. Construisez et démarrez les conteneurs Docker :
 
 Au sein d'un terminal git bash, exécutez la commande suivante :
 

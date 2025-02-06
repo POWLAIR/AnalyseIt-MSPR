@@ -10,6 +10,9 @@ COPY package.json package-lock.json ./
 # Installer les dépendances AVANT de copier les fichiers pour optimiser le cache
 RUN npm install --legacy-peer-deps
 
+# Copier les fichiers d'environnement
+COPY .env.local ./
+
 # Copier le reste des fichiers du projet
 COPY . .
 
