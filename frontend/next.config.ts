@@ -1,12 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-};
-module.exports = {
-  experimental: {
-    optimizeFonts: false,
-  },
+  /* Ajoutez vos options ici */
+  experimental: {},
 };
 
 export default nextConfig;
