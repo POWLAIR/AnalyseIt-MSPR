@@ -1,7 +1,3 @@
-Voici un exemple de fichier **README.md** adapté à ton projet. Il inclut des descriptions générales, des étapes d'installation, et des commandes pour démarrer le projet.
-
----
-
 # **Pandemic Analysis Platform**
 
 Cette plateforme est conçue pour collecter, nettoyer, analyser et visualiser les données sur les pandémies. Elle utilise une architecture basée sur **Docker**, avec un backend en **FastAPI**, un frontend en **Next.js**, et une base de données **MySQL**.
