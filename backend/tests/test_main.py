@@ -1,19 +1,16 @@
-from fastapi.testclient import TestClient
 import sys
+from fastapi.testclient import TestClient
 from pathlib import Path
+from main import app
 
-
-# Add backend directory to Python path
+# Ajout du backend au chemin Python
 sys.path.append(str(Path(__file__).parent.parent))
 
-from main import app  # noqa: E402
-
-
+# Création du client de test
 client = TestClient(app)
 
-
+# Test de l'endpoint de vérification de l'API
 def test_healthcheck():
     response = client.get("/healthcheck")
     assert response.status_code == 200
     assert response.json() == {"status": "API is running"}
- 
