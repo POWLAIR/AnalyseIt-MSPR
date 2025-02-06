@@ -63,7 +63,8 @@ jobs:
       - name: Run frontend tests
         run: |
           cd frontend
-          npm test
+              npm install
+              npm run test
 
   build-and-push-docker:
     name: Build and Push Docker Images
