@@ -6,6 +6,8 @@ WORKDIR /app
 
 # Copier les fichiers nécessaires
 COPY requirements.txt .
+
+# Installer les dépendances 
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copier le code source de l’API

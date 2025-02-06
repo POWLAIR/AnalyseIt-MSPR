@@ -1,4 +1,5 @@
 import Image from "next/image";
+import TestButton from "./components/TestButton/TestButton";
 
 export default function Home() {
   return (
@@ -22,6 +23,14 @@ export default function Home() {
           </li>
           <li>Save and see your changes instantly.</li>
         </ol>
+
+        {/* Section TestButton ajoutée */}
+        <div className="p-4">
+          <h1 className="text-2xl font-bold text-center sm:text-left">
+            Bienvenue
+          </h1>
+          <TestButton />
+        </div>
 
         <div className="flex gap-4 items-center flex-col sm:flex-row">
           <a
