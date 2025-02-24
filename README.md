@@ -84,7 +84,8 @@ Avant de commencer, assurez-vous d'avoir installé :
 Au sein d'un terminal git bash, exécutez la commande suivante :
 
 ```bash
-docker-compose --verbose up --build --no-cache
+docker-compose build --no-cache
+docker-compose up
 ```
 
 3. Les services seront accessibles aux ports suivants :
