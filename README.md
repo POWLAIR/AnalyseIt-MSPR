@@ -136,7 +136,31 @@ Pour exécuter les tests du backend, utilisez :
 docker exec -it backend pytest
 ```
 
+### Frontend
+
+Pour exécuter les tests du frontend, utilisez :
+
+```bash
+docker exec -it frontend npm run test
+```
+
 ---
+## **Linter **
+### Backend
+
+pour linter le backend, utilisez :
+
+```bash
+docker exec -it backend flake8 .
+```
+
+### Frontend
+
+pour linter le frontend, utilisez :
+
+```bash
+docker exec -it frontend npm run lint
+```
 
 ## **Contribution**
 
