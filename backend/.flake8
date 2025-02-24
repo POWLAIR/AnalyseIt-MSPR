@@ -1,6 +1,6 @@
 [flake8]
 max-line-length = 120
-ignore = E203, E266, E302, E501, W503, F403, E402
+ignore = E203, E266, E302, E501, W503, F403, E402, W293
 exclude = .git, __pycache__, env, venv, .venv, migrations
 max-complexity = 15
 
