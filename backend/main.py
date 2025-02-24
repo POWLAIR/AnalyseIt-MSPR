@@ -3,8 +3,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from core.db import engine  # Assurez-vous que ce module existe et est importable
-from pandas import read_csv
 import logging
+import kagglehub
+from kagglehub import KaggleDatasetAdapter
 
 # Configuration du logging
 logging.basicConfig(
@@ -53,26 +54,39 @@ def extract_data():
     """Endpoint pour extraire les données de la base de données."""
     logger.info("Démarrage du processus d'extraction des données")
     try:
-        # Définir les chemins des fichiers locaux
-        files = {
-            "mpox": "data/mpox-monkeypox-data.csv",
-            "covid19": "data/covid19-global-dataset.csv",
-            "corona": "data/corona-virus-report.csv"
+        # Définir les datasets Kaggle avec leurs fichiers
+        datasets = {
+            "mpox": {
+                "path": "utkarshx27/mpox-monkeypox-data",
+                "file": "owid-monkeypox-data.csv"
+            },
+            "covid19": {
+                "path": "josephassaker/covid19-global-dataset",
+                "file": "worldometer_coronavirus_daily_data.csv"
+            },
+            "corona": {
+                "path": "imdevskp/corona-virus-report",
+                "file": "covid_19_clean_complete.csv"
+            }
         }
 
         results = []
-        for name, file_path in files.items():
+        for name, dataset_info in datasets.items():
             try:
-                logger.info(f"Tentative de lecture du fichier: {name} ({file_path})")
-                # Lecture du fichier CSV
-                df = read_csv(file_path)
+                logger.info(f"Tentative de chargement du dataset Kaggle: {name}")
+                # Chargement du dataset via kagglehub
+                df = kagglehub.load_dataset(
+                    KaggleDatasetAdapter.PANDAS,
+                    dataset_info["path"],
+                    dataset_info["file"]
+                )
 
                 # Vérification basique du format
                 if df.empty:
-                    logger.warning(f"Le fichier {name} est vide")
-                    raise ValueError(f"Le fichier {name} est vide")
+                    logger.warning(f"Le dataset {name} est vide")
+                    raise ValueError(f"Le dataset {name} est vide")
 
-                logger.info(f"Fichier {name} lu avec succès: {len(df)} lignes, {len(df.columns)} colonnes")
+                logger.info(f"Dataset {name} chargé avec succès: {len(df)} lignes, {len(df.columns)} colonnes")
                 
                 # Enregistrement dans la base de données
                 logger.info(f"Début de l'insertion dans la table {name}")
@@ -86,12 +100,12 @@ def extract_data():
                     "columns": list(df.columns)
                 })
 
-            except Exception as file_error:
-                logger.error(f"Erreur lors du traitement du fichier {name}: {str(file_error)}")
+            except Exception as dataset_error:
+                logger.error(f"Erreur lors du traitement du dataset {name}: {str(dataset_error)}")
                 results.append({
                     "file": name,
                     "status": "error",
-                    "error": str(file_error)
+                    "error": str(dataset_error)
                 })
 
         logger.info("Processus d'extraction terminé")
