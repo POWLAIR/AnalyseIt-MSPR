@@ -7,6 +7,9 @@ import logging
 import kagglehub
 from kagglehub import KaggleDatasetAdapter
 
+import pandas as pd
+import numpy as np
+
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,
@@ -41,6 +44,52 @@ def test_db():
             return {"status": "success", "result": result[0]}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+
+def clean_dataset(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Effectue les étapes de nettoyage et de préparation des données :
+      1. Suppression des doublons
+      2. Gestion des valeurs manquantes
+      3. Normalisation des formats (dates, nombres, chaînes)
+      4. Vérification de la cohérence (valeurs aberrantes)
+    """
+    # 1) SUPPRESSION DES DOUBLONS
+    df.drop_duplicates(inplace=True)
+    
+    # 2) GESTION DES VALEURS MANQUANTES (exemple simple)
+    for col in df.columns:
+        if df[col].dtype in [np.float64, np.int64]:
+            mean_value = df[col].mean()
+            df[col].fillna(mean_value, inplace=True)
+        elif df[col].dtype == object:
+            df[col].fillna("inconnu", inplace=True)
+
+    # 3) NORMALISATION DES FORMATS
+    #    a) Dates (exemple : colonnes contenant 'date')
+    for col in df.columns:
+        if "date" in col.lower():
+            try:
+                df[col] = pd.to_datetime(df[col])
+            except Exception as e:
+                logger.warning(f"Impossible de convertir la colonne {col} en date : {e}")
+
+    #    b) Conversion nombres (string -> float) si possible
+    for col in df.select_dtypes(include=[object]):
+        try:
+            df[col] = df[col].str.replace(',', '.').astype(float)
+        except:
+            pass  # Si non convertible, on laisse tel quel
+
+    #    c) Normalisation des chaînes (tout en minuscule, etc.)
+    for col in df.select_dtypes(include=[object]):
+        df[col] = df[col].astype(str).str.strip().str.lower()
+
+    # 4) EXEMPLE DE VÉRIFICATION DE LA COHÉRENCE (valeurs aberrantes, ici négatives)
+    if "cases" in df.columns:
+        df = df[df["cases"] >= 0]
+
+    return df
 
 
 if __name__ == "__main__":
@@ -88,6 +137,9 @@ def extract_data():
 
                 logger.info(f"Dataset {name} chargé avec succès: {len(df)} lignes, {len(df.columns)} colonnes")
                 
+                # Nettoyage et préparation du DataFrame
+                df = clean_dataset(df)
+
                 # Enregistrement dans la base de données
                 logger.info(f"Début de l'insertion dans la table {name}")
                 df.to_sql(name, engine, if_exists="replace", index=False)
