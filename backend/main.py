@@ -56,6 +56,10 @@ def clean_dataset(df: pd.DataFrame) -> pd.DataFrame:
     """
     # 1) SUPPRESSION DES DOUBLONS
     df.drop_duplicates(inplace=True)
+
+    if 'id' in df.columns:
+        df.drop_duplicates(subset='id', inplace=True)
+
     
     # 2) GESTION DES VALEURS MANQUANTES (exemple simple)
     for col in df.columns:
@@ -97,13 +101,13 @@ if __name__ == "__main__":
 
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
+# ... (imports et config identiques)
 
 @app.get("/extract-data")
 def extract_data():
     """Endpoint pour extraire les données de la base de données."""
     logger.info("Démarrage du processus d'extraction des données")
     try:
-        # Définir les datasets Kaggle avec leurs fichiers
         datasets = {
             "mpox": {
                 "path": "utkarshx27/mpox-monkeypox-data",
@@ -123,27 +127,33 @@ def extract_data():
         for name, dataset_info in datasets.items():
             try:
                 logger.info(f"Tentative de chargement du dataset Kaggle: {name}")
-                # Chargement du dataset via kagglehub
                 df = kagglehub.load_dataset(
                     KaggleDatasetAdapter.PANDAS,
                     dataset_info["path"],
                     dataset_info["file"]
                 )
 
-                # Vérification basique du format
+                df = df.head(10)  # TEST
+
                 if df.empty:
                     logger.warning(f"Le dataset {name} est vide")
                     raise ValueError(f"Le dataset {name} est vide")
 
                 logger.info(f"Dataset {name} chargé avec succès: {len(df)} lignes, {len(df.columns)} colonnes")
-                
-                # Nettoyage et préparation du DataFrame
+
+                # Nettoyage
                 df = clean_dataset(df)
 
-                # Enregistrement dans la base de données
+                # Insertion en base
                 logger.info(f"Début de l'insertion dans la table {name}")
-                df.to_sql(name, engine, if_exists="replace", index=False)
-                logger.info(f"Données insérées avec succès dans la table {name}")
+                with engine.begin() as conn:
+                    df.to_sql(name, conn, if_exists="append", index=False)
+
+                # Log des 5 premières lignes insérées pour suivi
+                logger.info(f"Extrait des données insérées dans la table {name} :")
+                logger.info(df.head().to_string(index=False))
+
+                logger.info(f"Données insérées avec succès dans la table {name} ({len(df)} lignes)")
 
                 results.append({
                     "file": name,
