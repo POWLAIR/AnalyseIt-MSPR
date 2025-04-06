@@ -1,3 +1,7 @@
+# Expose les classes directement depuis ce module
+# Cela évite l'importation circulaire
+
+# Le reste du code va utiliser ces imports directement
 from pydantic import BaseModel, HttpUrl
 from typing import Optional, List
 from datetime import date

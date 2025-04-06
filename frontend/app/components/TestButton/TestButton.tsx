@@ -7,10 +7,7 @@ interface TestButtonProps {
   buttonLabel: string;
 }
 
-const TestButton: React.FC<TestButtonProps> = ({
-  apiEndpoint,
-  buttonLabel,
-}) => {
+export default function TestButton({ apiEndpoint, buttonLabel }: TestButtonProps) {
   const [response, setResponse] = useState<string | null>(null);
 
   const handleTest = async () => {
@@ -38,6 +35,4 @@ const TestButton: React.FC<TestButtonProps> = ({
       {response && <p className="mt-4">{response}</p>}
     </div>
   );
-};
-
-export default TestButton;
+}

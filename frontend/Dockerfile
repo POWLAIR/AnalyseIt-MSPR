@@ -7,23 +7,17 @@ WORKDIR /app
 # Copier uniquement les fichiers nécessaires pour installer les dépendances
 COPY package.json package-lock.json ./
 
-# Installer les dépendances AVANT de copier les fichiers pour optimiser le cache
-RUN npm install --legacy-peer-deps
+# Installer les dépendances
+RUN npm install
 
-# Copier les fichiers d'environnement
-COPY .env.local ./
+# Définir la variable d'environnement
+ENV NEXT_PUBLIC_API_URL=http://localhost:8000
 
-# Copier le reste des fichiers du projet
-COPY . .
-
-# Construire l'application Next.js
-RUN npm run build
-
-# Vérification que Next.js est bien installé
-RUN ls -la /app/node_modules/.bin/
+# Le reste des fichiers sera monté comme un volume dans docker-compose
+# pour le développement
 
 # Exposer le port utilisé par Next.js
 EXPOSE 3000
 
-# Commande de démarrage
-CMD ["npm", "run", "start"]
+# Commande de démarrage pour le développement
+CMD ["npm", "run", "dev"]

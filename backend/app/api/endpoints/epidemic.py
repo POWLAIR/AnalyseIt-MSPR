@@ -4,14 +4,19 @@ from typing import List, Optional
 from datetime import date
 
 from ...db.repositories import epidemic_repository
-from ..schemas import schemas
+from ..schemas import (
+    Epidemic,
+    EpidemicCreate,
+    EpidemicUpdate,
+    Response
+)
 from ..dependencies import get_db_session
 
 router = APIRouter()
 
-@router.post("/", response_model=schemas.Epidemic)
+@router.post("/", response_model=Epidemic)
 def create_epidemic(
-    epidemic: schemas.EpidemicCreate,
+    epidemic: EpidemicCreate,
     db: Session = Depends(get_db_session)
 ):
     """
@@ -24,7 +29,7 @@ def create_epidemic(
     """
     return epidemic_repository.create_epidemic(db=db, epidemic=epidemic)
 
-@router.get("/", response_model=List[schemas.Epidemic])
+@router.get("/", response_model=List[Epidemic])
 def read_epidemics(
     skip: int = 0,
     limit: int = 100,
@@ -46,7 +51,7 @@ def read_epidemics(
     }
     return epidemic_repository.get_epidemics(db, skip=skip, limit=limit, filters=filters)
 
-@router.get("/{epidemic_id}", response_model=schemas.Epidemic)
+@router.get("/{epidemic_id}", response_model=Epidemic)
 def read_epidemic(epidemic_id: int, db: Session = Depends(get_db_session)):
     """
     Get a specific epidemic by ID
@@ -56,10 +61,10 @@ def read_epidemic(epidemic_id: int, db: Session = Depends(get_db_session)):
         raise HTTPException(status_code=404, detail="Epidemic not found")
     return db_epidemic
 
-@router.put("/{epidemic_id}", response_model=schemas.Epidemic)
+@router.put("/{epidemic_id}", response_model=Epidemic)
 def update_epidemic(
     epidemic_id: int,
-    epidemic: schemas.EpidemicUpdate,
+    epidemic: EpidemicUpdate,
     db: Session = Depends(get_db_session)
 ):
     """
@@ -70,7 +75,7 @@ def update_epidemic(
         raise HTTPException(status_code=404, detail="Epidemic not found")
     return db_epidemic
 
-@router.delete("/{epidemic_id}", response_model=schemas.Response)
+@router.delete("/{epidemic_id}", response_model=Response)
 def delete_epidemic(epidemic_id: int, db: Session = Depends(get_db_session)):
     """
     Delete an epidemic by ID

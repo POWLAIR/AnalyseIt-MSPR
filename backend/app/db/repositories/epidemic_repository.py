@@ -2,9 +2,12 @@ from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 
 from ..models.base import Epidemic
-from ...api.schemas import schemas
+from ...api.schemas import (
+    EpidemicCreate,
+    EpidemicUpdate
+)
 
-def create_epidemic(db: Session, epidemic: schemas.EpidemicCreate) -> Epidemic:
+def create_epidemic(db: Session, epidemic: EpidemicCreate) -> Epidemic:
     db_epidemic = Epidemic(**epidemic.model_dump())
     db.add(db_epidemic)
     db.commit()
@@ -35,7 +38,7 @@ def get_epidemics(
 def update_epidemic(
     db: Session, 
     epidemic_id: int, 
-    epidemic: schemas.EpidemicUpdate
+    epidemic: EpidemicUpdate
 ) -> Optional[Epidemic]:
     db_epidemic = db.query(Epidemic).filter(Epidemic.id == epidemic_id).first()
     if db_epidemic:
