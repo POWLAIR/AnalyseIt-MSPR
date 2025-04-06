@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { apiClient } from './lib/api';
 import Card from './components/Card';
 import Link from 'next/link';
+import QuickAccess from './components/QuickAccess';
+import { DashboardIcon, AdminIcon, DocumentTextIcon } from './components/Icons';
 
 export default function Home() {
   const [stats, setStats] = useState<{
@@ -15,6 +17,24 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [dataStatus, setDataStatus] = useState<'loading' | 'available' | 'unavailable'>('loading');
+
+  const quickAccessItems = [
+    {
+      title: "Tableau de bord",
+      description: "Visualisation des données",
+      href: "/dashboard"
+    },
+    {
+      title: "Administration",
+      description: "Gestion des données",
+      href: "/admin"
+    },
+    {
+      title: "Statistiques",
+      description: "Données détaillées",
+      href: "/stats"
+    }
+  ];
 
   useEffect(() => {
     // Charger les statistiques au chargement initial
@@ -71,17 +91,17 @@ export default function Home() {
 
   return (
     <div className="space-y-8">
-      <section className="bg-white dark:bg-gray-900 rounded-lg p-8 shadow-md">
-        <h1 className="text-3xl font-bold mb-4 text-center sm:text-left">
-          AnalyseIt - Plateforme de données pandémiques
+      <section className="glass-card p-8 animate-fadeIn">
+        <h1 className="text-3xl font-bold mb-4 text-primary-950 dark:text-white text-center sm:text-left">
+          AnalyzeIT - Plateforme de données pandémiques
         </h1>
-        <p className="text-lg text-gray-700 dark:text-gray-300 mb-6">
+        <p className="text-lg text-text-secondary dark:text-gray-300 mb-6">
           Bienvenue sur la plateforme de gestion et d'analyse des données pandémiques. 
           Avant de commencer, vous devez initialiser la base de données et charger les données.
         </p>
 
         {/* Instructions */}
-        <div className="p-4 mb-6 text-sm rounded-lg bg-blue-50 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+        <div className="p-4 mb-6 text-sm rounded-lg bg-primary-50/70 backdrop-blur-sm text-primary-950 dark:bg-primary-900/30 dark:text-primary-300 border border-glass">
           <p className="font-semibold mb-2">Pour démarrer :</p>
           <ol className="list-decimal pl-5 space-y-1">
             <li>Cliquez sur "Réinitialiser la base de données" pour créer les tables nécessaires</li>
@@ -96,14 +116,14 @@ export default function Home() {
           <button
             onClick={handleInitDb}
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow transition-colors disabled:opacity-50"
+            className="glass-button w-full transition-colors disabled:opacity-50"
           >
             {loading ? 'Chargement...' : 'Réinitialiser la base de données'}
           </button>
           <button
             onClick={handleRunEtl}
             disabled={loading}
-            className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow transition-colors disabled:opacity-50"
+            className="glass-button-outline w-full transition-colors disabled:opacity-50"
           >
             {loading ? 'Chargement...' : 'Charger les données'}
           </button>
@@ -111,7 +131,7 @@ export default function Home() {
 
         {/* Message de statut */}
         {message && (
-          <div className="p-4 mb-6 text-sm rounded-lg bg-blue-50 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+          <div className="p-4 mb-6 text-sm rounded-lg bg-accent-turquoise/10 backdrop-blur-sm text-accent-turquoise border border-glass">
             {message}
           </div>
         )}
@@ -119,18 +139,18 @@ export default function Home() {
 
       {/* Key Indicators */}
       <section>
-        <h2 className="text-2xl font-semibold mb-4">État de la plateforme</h2>
+        <h2 className="text-2xl font-bold mb-4 text-primary-950 dark:text-white">État de la plateforme</h2>
         
         {dataStatus === 'loading' && (
-          <div className="p-6 text-center bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="p-6 text-center glass-card">
             Chargement des données...
           </div>
         )}
         
         {dataStatus === 'unavailable' && (
-          <div className="p-6 text-center bg-white dark:bg-gray-800 rounded-lg shadow">
-            <p className="text-gray-700 dark:text-gray-300 mb-2">Les données ne sont pas disponibles</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="p-6 text-center glass-card">
+            <p className="text-text-primary dark:text-gray-300 mb-2">Les données ne sont pas disponibles</p>
+            <p className="text-sm text-text-secondary dark:text-gray-400">
               Veuillez initialiser la base de données et charger les données en utilisant les boutons ci-dessus.
             </p>
           </div>
@@ -163,26 +183,7 @@ export default function Home() {
       </section>
 
       {/* Navigation rapide */}
-      <section className="mt-8">
-        <h2 className="text-2xl font-semibold mb-4">Accès rapide</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link href="/dashboard" 
-                className="flex flex-col items-center justify-center p-6 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-            <span className="text-xl font-semibold">Tableau de bord</span>
-            <span className="text-sm text-gray-600 dark:text-gray-400">Visualisation des données</span>
-          </Link>
-          <Link href="/admin" 
-                className="flex flex-col items-center justify-center p-6 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-            <span className="text-xl font-semibold">Administration</span>
-            <span className="text-sm text-gray-600 dark:text-gray-400">Gestion des données</span>
-          </Link>
-          <Link href="/stats" 
-                className="flex flex-col items-center justify-center p-6 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-            <span className="text-xl font-semibold">Statistiques</span>
-            <span className="text-sm text-gray-600 dark:text-gray-400">Données détaillées</span>
-          </Link>
-        </div>
-      </section>
+      <QuickAccess items={quickAccessItems} />
     </div>
   );
 }

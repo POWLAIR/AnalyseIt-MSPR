@@ -11,16 +11,16 @@ interface FilterPanelProps {
 
 export default function FilterPanel({ onFilterChange }: FilterPanelProps) {
   return (
-    <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
-      <h3 className="text-lg font-semibold mb-4">Filtres</h3>
-      <div className="space-y-4">
+    <div className="glass-card p-6">
+      <h3 className="text-lg font-semibold mb-4 text-primary-950 dark:text-white">Filtres</h3>
+      <div className="space-y-5">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-text-primary dark:text-gray-300 mb-2">
             Pays
           </label>
           <select
             onChange={(e) => onFilterChange({ country: e.target.value })}
-            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            className="bg-white/50 dark:bg-gray-700/50 backdrop-blur-xs border border-glass text-text-primary dark:text-white text-sm rounded-lg focus:ring-accent-turquoise focus:border-accent-turquoise block w-full p-2.5 transition-all duration-300"
           >
             <option value="">Tous les pays</option>
             <option value="FR">France</option>
@@ -31,12 +31,12 @@ export default function FilterPanel({ onFilterChange }: FilterPanelProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-text-primary dark:text-gray-300 mb-2">
             Type de pandémie
           </label>
           <select
             onChange={(e) => onFilterChange({ pandemicType: e.target.value })}
-            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            className="bg-white/50 dark:bg-gray-700/50 backdrop-blur-xs border border-glass text-text-primary dark:text-white text-sm rounded-lg focus:ring-accent-turquoise focus:border-accent-turquoise block w-full p-2.5 transition-all duration-300"
           >
             <option value="">Tous les types</option>
             <option value="VIRAL">Virale</option>
@@ -46,24 +46,28 @@ export default function FilterPanel({ onFilterChange }: FilterPanelProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-text-primary dark:text-gray-300 mb-2">
             Période
           </label>
-          <div className="flex space-x-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <input
               type="date"
               onChange={(e) => onFilterChange({ startDate: e.target.value ? new Date(e.target.value) : null })}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+              className="bg-white/50 dark:bg-gray-700/50 backdrop-blur-xs border border-glass text-text-primary dark:text-white text-sm rounded-lg focus:ring-accent-turquoise focus:border-accent-turquoise block w-full p-2.5 transition-all duration-300"
               placeholder="Date de début"
             />
             <input
               type="date"
               onChange={(e) => onFilterChange({ endDate: e.target.value ? new Date(e.target.value) : null })}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+              className="bg-white/50 dark:bg-gray-700/50 backdrop-blur-xs border border-glass text-text-primary dark:text-white text-sm rounded-lg focus:ring-accent-turquoise focus:border-accent-turquoise block w-full p-2.5 transition-all duration-300"
               placeholder="Date de fin"
             />
           </div>
         </div>
+        
+        <button className="glass-button w-full mt-4">
+          Appliquer les filtres
+        </button>
       </div>
     </div>
   );

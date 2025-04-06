@@ -13,28 +13,29 @@ interface CardProps {
 
 export default function Card({ title, value, description, icon, trend }: CardProps) {
   return (
-    <div className="block max-w-sm p-6 bg-white border border-gray-200 rounded-lg shadow hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700">
+    <div className="glass-card p-6 transition-all duration-300 relative overflow-hidden animate-scaleIn hover:shadow-lg">
       <div className="flex items-center justify-between">
-        <h5 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+        <h5 className="text-xl font-bold tracking-tight text-gray-800 dark:text-gray-100">
           {title}
         </h5>
-        {icon && <div className="text-2xl">{icon}</div>}
+        {icon && <div className="text-2xl text-accent-turquoise dark:text-accent-turquoise/80">{icon}</div>}
       </div>
       <div className="mt-4">
-        <p className="text-3xl font-bold text-gray-900 dark:text-white">
+        <p className="text-3xl font-bold text-gray-800 dark:text-gray-100">
           {value}
         </p>
         {trend && (
-          <p className={`text-sm ${trend.isPositive ? 'text-green-500' : 'text-red-500'}`}>
+          <div className={`data-badge ${trend.isPositive ? 'data-badge-success' : 'data-badge-warning'} inline-flex items-center mt-1`}>
             {trend.isPositive ? '↑' : '↓'} {Math.abs(trend.value)}%
-          </p>
+          </div>
         )}
         {description && (
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
             {description}
           </p>
         )}
       </div>
+      <div className="absolute -bottom-2 -right-2 w-16 h-16 rounded-full bg-primary-100/50 dark:bg-primary-700/20 blur-sm -z-10"></div>
     </div>
   );
 } 
