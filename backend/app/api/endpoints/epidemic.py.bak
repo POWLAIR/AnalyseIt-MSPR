@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import date, timedelta
-import random
+from datetime import date
 
 from ...db.repositories import epidemic_repository
 from ..schemas import (
@@ -96,6 +95,30 @@ def read_epidemic(epidemic_id: int, db: Session = Depends(get_db_session)):
         raise HTTPException(status_code=404, detail="Epidemic not found")
     return db_epidemic
 
+@router.put("/{epidemic_id}", response_model=Epidemic)
+def update_epidemic(
+    epidemic_id: int,
+    epidemic: EpidemicUpdate,
+    db: Session = Depends(get_db_session)
+):
+    """
+    Update an epidemic by ID
+    """
+    db_epidemic = epidemic_repository.update_epidemic(db, epidemic_id=epidemic_id, epidemic=epidemic)
+    if db_epidemic is None:
+        raise HTTPException(status_code=404, detail="Epidemic not found")
+    return db_epidemic
+
+@router.delete("/{epidemic_id}", response_model=Response)
+def delete_epidemic(epidemic_id: int, db: Session = Depends(get_db_session)):
+    """
+    Delete an epidemic by ID
+    """
+    success = epidemic_repository.delete_epidemic(db, epidemic_id=epidemic_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Epidemic not found")
+    return {"status": "success", "message": "Epidemic deleted successfully"}
+
 @router.get("/{epidemic_id}/data", response_model=list)
 def get_epidemic_data(epidemic_id: int, db: Session = Depends(get_db_session)):
     """
@@ -108,6 +131,9 @@ def get_epidemic_data(epidemic_id: int, db: Session = Depends(get_db_session)):
     
     # Pour l'instant, génère des données fictives
     # Dans un système complet, ces données viendraient de la base de données
+    from datetime import date, timedelta
+    import random
+    
     data = []
     current_cases = 0
     current_deaths = 0
@@ -134,28 +160,4 @@ def get_epidemic_data(epidemic_id: int, db: Session = Depends(get_db_session)):
             "recoveries": current_recoveries
         })
     
-    return data
-
-@router.put("/{epidemic_id}", response_model=Epidemic)
-def update_epidemic(
-    epidemic_id: int,
-    epidemic: EpidemicUpdate,
-    db: Session = Depends(get_db_session)
-):
-    """
-    Update an epidemic by ID
-    """
-    db_epidemic = epidemic_repository.update_epidemic(db, epidemic_id=epidemic_id, epidemic=epidemic)
-    if db_epidemic is None:
-        raise HTTPException(status_code=404, detail="Epidemic not found")
-    return db_epidemic
-
-@router.delete("/{epidemic_id}", response_model=Response)
-def delete_epidemic(epidemic_id: int, db: Session = Depends(get_db_session)):
-    """
-    Delete an epidemic by ID
-    """
-    success = epidemic_repository.delete_epidemic(db, epidemic_id=epidemic_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Epidemic not found")
-    return {"status": "success", "message": "Epidemic deleted successfully"} 
+    return data 

@@ -1,30 +1,43 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { apiClient } from './lib/api';
 import Card from './components/Card';
 import Link from 'next/link';
 
 export default function Home() {
-  const [stats, setStats] = useState({
-    totalPandemics: 0,
-    activePandemics: 0,
-    averageTransmissionRate: 0,
-    averageMortalityRate: 0,
-  });
+  const [stats, setStats] = useState<{
+    totalPandemics: number;
+    activePandemics: number;
+    averageTransmissionRate: number;
+    averageMortalityRate: number;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [dataStatus, setDataStatus] = useState<'loading' | 'available' | 'unavailable'>('loading');
+
+  useEffect(() => {
+    // Charger les statistiques au chargement initial
+    fetchStats();
+  }, []);
 
   const fetchStats = async () => {
+    setDataStatus('loading');
     const statsData = await apiClient.getPandemicStats();
-    setStats(statsData);
+    if (statsData) {
+      setStats(statsData);
+      setDataStatus('available');
+    } else {
+      setStats(null);
+      setDataStatus('unavailable');
+    }
   };
 
   const handleInitDb = async () => {
     setLoading(true);
     setMessage(null);
     try {
-      const response = await fetch('/api/v1/admin/init-db', {
+      const response = await fetch('/api/v1/admin/init-db?reset=true', {
         method: 'POST',
       });
       const data = await response.json();
@@ -42,7 +55,7 @@ export default function Home() {
     setLoading(true);
     setMessage(null);
     try {
-      const response = await fetch('/api/v1/admin/run-etl', {
+      const response = await fetch('/api/v1/admin/run-etl?reset=true', {
         method: 'POST',
       });
       const data = await response.json();
@@ -64,8 +77,19 @@ export default function Home() {
         </h1>
         <p className="text-lg text-gray-700 dark:text-gray-300 mb-6">
           Bienvenue sur la plateforme de gestion et d'analyse des données pandémiques. 
-          Utilisez les outils ci-dessous pour initialiser la plateforme et charger les données.
+          Avant de commencer, vous devez initialiser la base de données et charger les données.
         </p>
+
+        {/* Instructions */}
+        <div className="p-4 mb-6 text-sm rounded-lg bg-blue-50 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+          <p className="font-semibold mb-2">Pour démarrer :</p>
+          <ol className="list-decimal pl-5 space-y-1">
+            <li>Cliquez sur "Réinitialiser la base de données" pour créer les tables nécessaires</li>
+            <li>Cliquez sur "Charger les données" pour importer les données de test</li>
+            <li>Explorez ensuite les différentes fonctionnalités de la plateforme</li>
+          </ol>
+          <p className="mt-2 text-sm italic">Note : Ces actions supprimeront toutes les données existantes!</p>
+        </div>
 
         {/* Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -74,14 +98,14 @@ export default function Home() {
             disabled={loading}
             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow transition-colors disabled:opacity-50"
           >
-            {loading ? 'Chargement...' : 'Initialiser la base de données'}
+            {loading ? 'Chargement...' : 'Réinitialiser la base de données'}
           </button>
           <button
             onClick={handleRunEtl}
             disabled={loading}
             className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow transition-colors disabled:opacity-50"
           >
-            {loading ? 'Chargement...' : 'Charger les données (ETL)'}
+            {loading ? 'Chargement...' : 'Charger les données'}
           </button>
         </div>
 
@@ -96,28 +120,46 @@ export default function Home() {
       {/* Key Indicators */}
       <section>
         <h2 className="text-2xl font-semibold mb-4">État de la plateforme</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card
-            title="Pandémies totales"
-            value={stats.totalPandemics}
-            description="Nombre total de pandémies enregistrées"
-          />
-          <Card
-            title="Pandémies actives"
-            value={stats.activePandemics}
-            description="Pandémies en cours actuellement"
-          />
-          <Card
-            title="Taux de transmission moyen"
-            value={`${stats.averageTransmissionRate.toFixed(2)}%`}
-            description="Moyenne du taux de transmission"
-          />
-          <Card
-            title="Taux de mortalité moyen"
-            value={`${stats.averageMortalityRate.toFixed(2)}%`}
-            description="Moyenne du taux de mortalité"
-          />
-        </div>
+        
+        {dataStatus === 'loading' && (
+          <div className="p-6 text-center bg-white dark:bg-gray-800 rounded-lg shadow">
+            Chargement des données...
+          </div>
+        )}
+        
+        {dataStatus === 'unavailable' && (
+          <div className="p-6 text-center bg-white dark:bg-gray-800 rounded-lg shadow">
+            <p className="text-gray-700 dark:text-gray-300 mb-2">Les données ne sont pas disponibles</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Veuillez initialiser la base de données et charger les données en utilisant les boutons ci-dessus.
+            </p>
+          </div>
+        )}
+        
+        {dataStatus === 'available' && stats && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card
+              title="Pandémies totales"
+              value={stats.totalPandemics}
+              description="Nombre total de pandémies enregistrées"
+            />
+            <Card
+              title="Pandémies actives"
+              value={stats.activePandemics}
+              description="Pandémies en cours actuellement"
+            />
+            <Card
+              title="Taux de transmission moyen"
+              value={`${stats.averageTransmissionRate.toFixed(2)}%`}
+              description="Moyenne du taux de transmission"
+            />
+            <Card
+              title="Taux de mortalité moyen"
+              value={`${stats.averageMortalityRate.toFixed(2)}%`}
+              description="Moyenne du taux de mortalité"
+            />
+          </div>
+        )}
       </section>
 
       {/* Navigation rapide */}
