@@ -27,6 +27,12 @@ export default function Navbar() {
         <line x1="9" y1="21" x2="9" y2="9"></line>
       </svg>
     ) },
+    { href: '/dashboard/detailed-analysis', label: 'Analyse détaillée', icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+      </svg>
+    ) },
     { href: '/pandemics', label: 'Pandémies', icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 2a8 8 0 0 0-8 8c0 5.4 7.4 11.5 7.8 11.8a.4.4 0 0 0 .5 0c.4-.3 7.7-6.4 7.7-11.8a8 8 0 0 0-8-8Z"></path>

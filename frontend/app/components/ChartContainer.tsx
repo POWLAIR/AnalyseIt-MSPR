@@ -10,9 +10,10 @@ import {
   Tooltip,
   Legend,
   BarElement,
+  ArcElement,
   ChartOptions,
 } from 'chart.js';
-import { Line, Bar } from 'react-chartjs-2';
+import { Line, Bar, Pie } from 'react-chartjs-2';
 
 ChartJS.register(
   CategoryScale,
@@ -20,29 +21,30 @@ ChartJS.register(
   PointElement,
   LineElement,
   BarElement,
+  ArcElement,
   Title,
   Tooltip,
   Legend
 );
 
 interface ChartContainerProps {
-  type: 'line' | 'bar';
+  type: 'line' | 'bar' | 'pie';
   title: string;
   data: {
     labels: string[];
     datasets: {
-      label: string;
+      label?: string;
       data: number[];
       borderColor?: string;
-      backgroundColor?: string;
+      backgroundColor?: string | string[];
       tension?: number;
     }[];
   };
-  options?: ChartOptions<'line' | 'bar'>;
+  options?: ChartOptions<'line' | 'bar' | 'pie'>;
 }
 
 export default function ChartContainer({ type, title, data, options }: ChartContainerProps) {
-  const defaultOptions: ChartOptions<'line' | 'bar'> = {
+  const defaultOptions: ChartOptions<'line' | 'bar' | 'pie'> = {
     responsive: true,
     plugins: {
       legend: {
@@ -82,7 +84,7 @@ export default function ChartContainer({ type, title, data, options }: ChartCont
         usePointStyle: true,
       },
     },
-    scales: {
+    scales: type !== 'pie' ? {
       x: {
         grid: {
           display: false,
@@ -111,16 +113,20 @@ export default function ChartContainer({ type, title, data, options }: ChartCont
           },
         },
       },
-    },
+    } : undefined,
     ...options,
   };
 
   return (
     <div className="glass-card p-6 animate-fadeIn">
-      {type === 'line' ? (
-        <Line options={defaultOptions} data={data} />
-      ) : (
-        <Bar options={defaultOptions} data={data} />
+      {type === 'line' && (
+        <Line options={defaultOptions as ChartOptions<'line'>} data={data} />
+      )}
+      {type === 'bar' && (
+        <Bar options={defaultOptions as ChartOptions<'bar'>} data={data} />
+      )}
+      {type === 'pie' && (
+        <Pie options={defaultOptions as ChartOptions<'pie'>} data={data} />
       )}
     </div>
   );

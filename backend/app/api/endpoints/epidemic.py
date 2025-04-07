@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import date, timedelta
 import random
+import logging
 
 from ...db.repositories import epidemic_repository
 from ..schemas import (
@@ -35,21 +36,31 @@ def read_epidemics(
     skip: int = 0,
     limit: int = 100,
     type: Optional[str] = None,
+    country: Optional[str] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
+    active: Optional[bool] = None,
     db: Session = Depends(get_db_session)
 ):
     """
     Get all epidemics with optional filters:
     - type: Filter by epidemic type
+    - country: Filter by country
     - start_date: Filter by start date
     - end_date: Filter by end date
+    - active: Filter by active status (true = ongoing, false = ended)
     """
     filters = {
         "type": type,
+        "country": country,
         "start_date": start_date,
-        "end_date": end_date
+        "end_date": end_date,
+        "active": active
     }
+    
+    # Journalisation des filtres pour le débogage
+    logging.debug(f"Applying filters: {filters}")
+    
     return epidemic_repository.get_epidemics(db, skip=skip, limit=limit, filters=filters)
 
 @router.get("/stats", response_model=dict)
@@ -86,6 +97,36 @@ def get_epidemic_stats(db: Session = Depends(get_db_session)):
         "averageMortalityRate": avg_mortality
     }
 
+@router.get("/filters", response_model=dict)
+def get_filters_options(db: Session = Depends(get_db_session)):
+    """
+    Get unique countries and types for filtering epidemics
+    """
+    return epidemic_repository.get_filter_options(db)
+
+@router.get("/detailed-data", response_model=dict)
+def get_detailed_epidemic_data(
+    skip: int = 0,
+    limit: int = 20,
+    db: Session = Depends(get_db_session)
+):
+    """
+    Get detailed data for all epidemics including:
+    - Daily statistics with active cases, new cases, recoveries
+    - Location information
+    - Data sources
+    """
+    # Récupérer les données détaillées
+    detailed_data = epidemic_repository.get_detailed_epidemic_data(db, skip, limit)
+    
+    # Formater les données pour le frontend
+    result = {
+        "epidemics": detailed_data,
+        "totalCount": epidemic_repository.count_epidemics(db)
+    }
+    
+    return result
+
 @router.get("/{epidemic_id}", response_model=Epidemic)
 def read_epidemic(epidemic_id: int, db: Session = Depends(get_db_session)):
     """
@@ -106,8 +147,21 @@ def get_epidemic_data(epidemic_id: int, db: Session = Depends(get_db_session)):
     if db_epidemic is None:
         raise HTTPException(status_code=404, detail="Epidemic not found")
     
-    # Pour l'instant, génère des données fictives
-    # Dans un système complet, ces données viendraient de la base de données
+    # Récupérer les données réelles de la base de données
+    daily_stats = epidemic_repository.get_epidemic_daily_stats(db, epidemic_id)
+    
+    if daily_stats:
+        data = []
+        for stat in daily_stats:
+            data.append({
+                "date": stat.date.isoformat(),
+                "cases": stat.cases,
+                "deaths": stat.deaths,
+                "recoveries": stat.recovered
+            })
+        return data
+    
+    # Fallback: Générer des données fictives si aucune donnée réelle n'est disponible
     data = []
     current_cases = 0
     current_deaths = 0
