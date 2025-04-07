@@ -1,3 +1,7 @@
+# Expose les classes directement depuis ce module
+# Cela évite l'importation circulaire
+
+# Le reste du code va utiliser ces imports directement
 from pydantic import BaseModel, HttpUrl
 from typing import Optional, List
 from datetime import date
@@ -9,6 +13,11 @@ class EpidemicBase(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     type: Optional[str] = None
+    country: Optional[str] = None
+    transmission_rate: Optional[float] = 0.0
+    mortality_rate: Optional[float] = 0.0
+    total_cases: Optional[int] = 0
+    total_deaths: Optional[int] = 0
 
 class EpidemicCreate(EpidemicBase):
     pass
