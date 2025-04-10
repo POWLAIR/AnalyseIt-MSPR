@@ -352,25 +352,42 @@ export default function Dashboard() {
     if (!stats) return {
       labels: ['Aucune donnée'],
       datasets: [{
-        label: 'Distribution par type',
+        label: 'Cas',
         data: [0],
-        backgroundColor: ['rgb(255, 99, 132)']
+        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+        borderColor: 'rgba(59, 130, 246, 1)',
+        borderWidth: 1
       }]
     };
 
     return {
       labels: stats.type_distribution.map(d => d.type),
-      datasets: [{
-        label: 'Distribution par type',
-        data: stats.type_distribution.map(d => d.cases),
-        backgroundColor: [
-          'rgb(255, 99, 132)',
-          'rgb(54, 162, 235)',
-          'rgb(255, 206, 86)',
-          'rgb(75, 192, 192)',
-          'rgb(153, 102, 255)'
-        ]
-      }]
+      datasets: [
+        {
+          label: 'Cas',
+          data: stats.type_distribution.map(d => d.cases),
+          backgroundColor: 'rgba(59, 130, 246, 0.8)',
+          borderColor: 'rgba(59, 130, 246, 1)',
+          borderWidth: 1
+        },
+        {
+          label: 'Décès',
+          data: stats.type_distribution.map(d => d.deaths),
+          backgroundColor: 'rgba(239, 68, 68, 0.8)',
+          borderColor: 'rgba(239, 68, 68, 1)',
+          borderWidth: 1
+        },
+        {
+          label: 'Taux de mortalité (%)',
+          data: stats.type_distribution.map(d =>
+            d.cases > 0 ? Number(((d.deaths / d.cases) * 100).toFixed(1)) : 0
+          ),
+          backgroundColor: 'rgba(16, 185, 129, 0.8)',
+          borderColor: 'rgba(16, 185, 129, 1)',
+          borderWidth: 1,
+          yAxisID: 'percentage'
+        }
+      ]
     };
   };
 
@@ -528,8 +545,61 @@ export default function Dashboard() {
 
               <Card className="backdrop-blur-md bg-white/70 border border-white/50 shadow-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Distribution par type</h3>
-                <DoughnutChart
+                <BarChart
                   data={prepareTypeDistributionData()}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                      legend: {
+                        position: 'top',
+                      },
+                      tooltip: {
+                        callbacks: {
+                          label: function (context: any) {
+                            const value = context.raw as number;
+                            if (context.dataset.label === 'Taux de mortalité (%)') {
+                              return `${context.dataset.label}: ${value.toFixed(1)}%`;
+                            }
+                            return value >= 1000000
+                              ? `${context.dataset.label}: ${(value / 1000000).toFixed(1)}M`
+                              : value >= 1000
+                                ? `${context.dataset.label}: ${(value / 1000).toFixed(1)}k`
+                                : `${context.dataset.label}: ${value}`;
+                          }
+                        }
+                      }
+                    },
+                    scales: {
+                      x: {
+                        stacked: false,
+                        ticks: {
+                          callback: function (value: string | number) {
+                            const numValue = Number(value);
+                            return numValue >= 1000000
+                              ? `${(numValue / 1000000).toFixed(1)}M`
+                              : numValue >= 1000
+                                ? `${(numValue / 1000).toFixed(1)}k`
+                                : value;
+                          }
+                        }
+                      },
+                      y: {
+                        stacked: false,
+                        beginAtZero: true
+                      },
+                      percentage: {
+                        position: 'right',
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                          display: true,
+                          text: 'Taux de mortalité (%)'
+                        }
+                      }
+                    }
+                  }}
                 />
               </Card>
             </div>

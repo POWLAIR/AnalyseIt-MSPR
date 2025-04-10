@@ -1,20 +1,49 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useRef, useEffect } from 'react';
 
 interface ChartContainerProps {
-  title: string;
   children: ReactNode;
-  className?: string;
 }
 
-export default function ChartContainer({ title, children, className = '' }: ChartContainerProps) {
+export default function ChartContainer({ children }: ChartContainerProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const resizeCanvas = () => {
+      const container = containerRef.current;
+      if (container) {
+        const canvas = container.querySelector('canvas');
+        if (canvas) {
+          // Force une hauteur maximale et un ratio d'aspect 16:9
+          const width = container.clientWidth;
+          const height = Math.min(width * 0.5625, 400); // ratio 16:9 avec max 400px
+          canvas.style.height = `${height}px`;
+          canvas.style.width = `${width}px`;
+        }
+      }
+    };
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    return () => window.removeEventListener('resize', resizeCanvas);
+  }, []);
+
   return (
-    <div className={`bg-white rounded-lg shadow p-6 ${className}`}>
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
-      <div className="h-[300px]">
-        {children}
-      </div>
+    <div
+      ref={containerRef}
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '400px',
+        maxHeight: '400px',
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+    >
+      {children}
     </div>
   );
 } 

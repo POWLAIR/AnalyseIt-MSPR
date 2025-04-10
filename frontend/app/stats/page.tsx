@@ -91,13 +91,13 @@ export default function StatsPage() {
     const chartData = {
         // Évolution temporelle globale
         globalEvolution: {
-            labels: stats.daily_evolution.map(day =>
-                format(new Date(day.date), 'dd MMM yyyy', { locale: fr })
-            ),
+            labels: stats.daily_evolution
+                .slice(-30) // Prendre seulement les 30 derniers jours
+                .map(day => format(new Date(day.date), 'dd MMM', { locale: fr })),
             datasets: [
                 {
                     label: 'Nouveaux Cas',
-                    data: stats.daily_evolution.map(day => day.new_cases),
+                    data: stats.daily_evolution.slice(-30).map(day => day.new_cases),
                     borderColor: '#3b82f6',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
                     fill: true,
@@ -105,7 +105,7 @@ export default function StatsPage() {
                 },
                 {
                     label: 'Nouveaux Décès',
-                    data: stats.daily_evolution.map(day => day.new_deaths),
+                    data: stats.daily_evolution.slice(-30).map(day => day.new_deaths),
                     borderColor: '#ef4444',
                     backgroundColor: 'rgba(239, 68, 68, 0.1)',
                     fill: true,
@@ -113,7 +113,7 @@ export default function StatsPage() {
                 },
                 {
                     label: 'Cas Actifs',
-                    data: stats.daily_evolution.map(day => day.active_cases),
+                    data: stats.daily_evolution.slice(-30).map(day => day.active_cases),
                     borderColor: '#10b981',
                     backgroundColor: 'rgba(16, 185, 129, 0.1)',
                     fill: true,
@@ -125,17 +125,22 @@ export default function StatsPage() {
         // Distribution par type d'épidémie
         typeDistribution: {
             labels: stats.type_distribution.map(type => type.type),
-            datasets: [{
-                label: 'Cas par type',
-                data: stats.type_distribution.map(type => type.cases),
-                backgroundColor: [
-                    'rgba(59, 130, 246, 0.8)',  // Bleu
-                    'rgba(239, 68, 68, 0.8)',   // Rouge
-                    'rgba(16, 185, 129, 0.8)',  // Vert
-                    'rgba(245, 158, 11, 0.8)',  // Orange
-                    'rgba(139, 92, 246, 0.8)'   // Violet
-                ]
-            }]
+            datasets: [
+                {
+                    label: 'Cas',
+                    data: stats.type_distribution.map(type => type.cases),
+                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Décès',
+                    data: stats.type_distribution.map(type => type.deaths),
+                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    borderWidth: 1
+                }
+            ]
         },
 
         // Distribution géographique
@@ -209,7 +214,7 @@ export default function StatsPage() {
                             <CardTitle>Évolution Temporelle</CardTitle>
                             <CardDescription>Progression des cas sur les 30 derniers jours</CardDescription>
                         </CardHeader>
-                        <CardContent className="h-[400px]">
+                        <CardContent style={{ height: '400px', maxHeight: '400px', position: 'relative' }}>
                             <LineChart data={chartData.globalEvolution} />
                         </CardContent>
                     </Card>
@@ -217,17 +222,62 @@ export default function StatsPage() {
                     {/* Distribution par type */}
                     <Card className="bg-white hover:shadow-lg transition-shadow">
                         <CardHeader>
-                            <CardTitle>Distribution par Type</CardTitle>
-                            <CardDescription>Répartition des cas selon le type d'épidémie</CardDescription>
+                            <CardTitle>Distribution par Type d'Épidémie</CardTitle>
+                            <CardDescription>Comparaison des cas et décès par type d'épidémie</CardDescription>
                         </CardHeader>
                         <CardContent className="h-[400px]">
-                            <PieChart data={chartData.typeDistribution} />
+                            <BarChart
+                                data={chartData.typeDistribution}
+                                options={{
+                                    indexAxis: 'y',
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            position: 'top',
+                                        },
+                                        tooltip: {
+                                            callbacks: {
+                                                label: function (context: any) {
+                                                    const value = context.raw as number;
+                                                    if (value >= 1000000) {
+                                                        return `${context.dataset.label}: ${(value / 1000000).toFixed(1)}M`;
+                                                    } else if (value >= 1000) {
+                                                        return `${context.dataset.label}: ${(value / 1000).toFixed(1)}k`;
+                                                    }
+                                                    return `${context.dataset.label}: ${value}`;
+                                                }
+                                            }
+                                        }
+                                    },
+                                    scales: {
+                                        x: {
+                                            stacked: false,
+                                            ticks: {
+                                                callback: function (value: string | number) {
+                                                    const numValue = Number(value);
+                                                    if (numValue >= 1000000) {
+                                                        return (numValue / 1000000).toFixed(1) + 'M';
+                                                    } else if (numValue >= 1000) {
+                                                        return (numValue / 1000).toFixed(1) + 'k';
+                                                    }
+                                                    return value;
+                                                }
+                                            }
+                                        },
+                                        y: {
+                                            stacked: false,
+                                            beginAtZero: true
+                                        }
+                                    }
+                                }}
+                            />
                         </CardContent>
                     </Card>
                 </div>
 
                 {/* Graphiques secondaires */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
                     {/* Distribution géographique */}
                     <Card className="bg-white hover:shadow-lg transition-shadow">
                         <CardHeader>
@@ -236,17 +286,6 @@ export default function StatsPage() {
                         </CardHeader>
                         <CardContent className="h-[400px]">
                             <BarChart data={chartData.geographicDistribution} />
-                        </CardContent>
-                    </Card>
-
-                    {/* Taux de mortalité par type */}
-                    <Card className="bg-white hover:shadow-lg transition-shadow">
-                        <CardHeader>
-                            <CardTitle>Taux de Mortalité par Type</CardTitle>
-                            <CardDescription>Comparaison des taux de mortalité selon le type d'épidémie</CardDescription>
-                        </CardHeader>
-                        <CardContent className="h-[400px]">
-                            <BarChart data={chartData.mortalityByType} />
                         </CardContent>
                     </Card>
                 </div>
