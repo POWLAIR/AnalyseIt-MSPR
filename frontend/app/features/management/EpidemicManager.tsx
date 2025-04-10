@@ -48,7 +48,7 @@ export default function EpidemicManager() {
     const loadEpidemics = async () => {
         try {
             const data = await apiClient.getPandemics();
-            setEpidemics(data);
+            setEpidemics(data.items);
         } catch (error) {
             console.error('Failed to load epidemics:', error);
         } finally {

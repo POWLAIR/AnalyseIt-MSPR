@@ -32,6 +32,9 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  paramsSerializer: {
+    indexes: null,
+  },
 });
 
 // Intercepteur pour les réponses
@@ -195,30 +198,62 @@ export interface DashboardStats {
   }>;
 }
 
-export const apiClient = {
-  // Get all pandemics
-  getPandemics: async (): Promise<Pandemic[]> => {
-    try {
-      const response = await api.get("/api/v1/epidemics");
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pages: number;
+}
 
-      // Transformer les données du backend au format attendu par le frontend
-      return response.data.map((item: any) => ({
-        id: item.id.toString(),
-        name: item.name,
-        type: item.type || "Non spécifié",
-        country: item.country || "Non spécifié",
-        startDate: item.start_date,
-        endDate: item.end_date,
-        transmissionRate: item.transmission_rate || 0,
-        mortalityRate: item.mortality_rate || 0,
-        totalCases: item.total_cases || 0,
-        totalDeaths: item.total_deaths || 0,
-        description: item.description || "",
-        active: item.end_date === null, // Une pandémie est active si elle n'a pas de date de fin
-      }));
+export const apiClient = {
+  // Get all pandemics with pagination
+  getPandemics: async (
+    page: number = 1,
+    pageSize: number = 10,
+    filters: {
+      search?: string;
+      type?: string;
+      country?: string;
+      sortBy?: string;
+      sortDesc?: boolean;
+    } = {}
+  ): Promise<PaginatedResponse<Pandemic>> => {
+    try {
+      const response = await api.get("/api/v1/epidemics", {
+        params: {
+          skip: (page - 1) * pageSize,
+          limit: pageSize,
+          ...filters,
+        },
+      });
+
+      return {
+        items: response.data.items.map((item: any) => ({
+          id: item.id.toString(),
+          name: item.name,
+          type: item.type || "Non spécifié",
+          country: item.country || "Non spécifié",
+          startDate: item.start_date,
+          endDate: item.end_date,
+          transmissionRate: item.transmission_rate || 0,
+          mortalityRate: item.mortality_rate || 0,
+          totalCases: item.total_cases || 0,
+          totalDeaths: item.total_deaths || 0,
+          description: item.description || "",
+          active: item.end_date === null,
+        })),
+        total: response.data.total,
+        page: response.data.page,
+        pages: response.data.pages,
+      };
     } catch (error) {
       console.error("Failed to fetch epidemics:", error);
-      return [];
+      return {
+        items: [],
+        total: 0,
+        page: 1,
+        pages: 1,
+      };
     }
   },
 
@@ -505,7 +540,7 @@ export const apiClient = {
   // Get dashboard statistics
   getDashboardStats: async (): Promise<DashboardStats> => {
     try {
-      const response = await api.get("/api/v1/epidemics/stats/dashboard");
+      const response = await api.get("/api/v1/stats/dashboard");
       return response.data;
     } catch (error) {
       console.error("Failed to fetch dashboard stats:", error);

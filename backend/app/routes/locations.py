@@ -8,6 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+@router.get("")
 @router.get("/")
 def get_locations(db: Session = Depends(get_db)):
     """Get all locations."""

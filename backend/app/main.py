@@ -18,7 +18,9 @@ app = FastAPI(
     version=settings.VERSION,
     docs_url="/docs",
     redoc_url="/redoc",
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    # Désactiver la redirection automatique des slashes
+    redirect_slashes=False
 )
 
 # Configuration CORS

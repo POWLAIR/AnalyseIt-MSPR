@@ -26,27 +26,56 @@ KAGGLE_DATASETS = {
 @backoff.on_exception(backoff.expo,
                      (SQLAlchemyError, OperationalError),
                      max_tries=5)
-def get_or_create_location(db: Session, row: pd.Series) -> int:
-    location_name = row.get("location", "Unknown")
-    if pd.isna(location_name) or location_name.strip() == "":
-        location_name = "Unknown"
+def get_or_create_location(db: Session, location_data) -> int:
+    """
+    Get or create a location record in the database.
+    
+    Args:
+        db: Database session
+        location_data: Either a string (country name) or a pandas Series/dict containing location data
+    
+    Returns:
+        int: The ID of the location
+    """
+    try:
+        # Handle string input (direct country name)
+        if isinstance(location_data, str):
+            location_name = location_data
+            region = None
+            iso_code = None
+        # Handle dictionary-like input (pandas Series or dict)
+        else:
+            location_name = location_data.get("location", "Unknown") if hasattr(location_data, "get") else str(location_data)
+            region = location_data.get("region") or location_data.get("state") or location_data.get("province") if hasattr(location_data, "get") else None
+            iso_code = location_data.get("iso_code") or location_data.get("iso") or location_data.get("code") if hasattr(location_data, "get") else None
 
-    location = db.query(Localisation).filter_by(country=location_name).first()
+        # Normalize location name
+        if pd.isna(location_name) or location_name.strip() == "":
+            location_name = "Unknown"
 
-    if not location:
-        region = row.get("region") or row.get("state") or row.get("province") or None
-        iso_code = row.get("iso_code") or row.get("iso") or row.get("code") or None
+        # Try to find existing location
+        location = db.query(Localisation).filter_by(country=location_name).first()
 
-        location = Localisation(
-            country=location_name,
-            region=region if pd.notna(region) else None,
-            iso_code=iso_code if pd.notna(iso_code) else None
-        )
-        db.add(location)
-        db.commit()
-        db.refresh(location)
+        if not location:
+            # Create new location
+            location = Localisation(
+                country=location_name,
+                region=region if pd.notna(region) else None,
+                iso_code=iso_code if pd.notna(iso_code) else None
+            )
+            db.add(location)
+            try:
+                db.commit()
+                db.refresh(location)
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Error creating location {location_name}: {e}")
+                raise
 
-    return location.id
+        return location.id
+    except Exception as e:
+        logger.error(f"Error in get_or_create_location for {location_data}: {e}")
+        raise
 
 def get_csv_files_from_directory(dataset_path: str):
     """Retourne tous les fichiers CSV dans un répertoire de dataset."""
@@ -76,23 +105,34 @@ def insert_or_update_stats(db: Session, daily_stats: list) -> int:
         
         while retry_count < max_retries:
             try:
-                # Utiliser une requête INSERT ... ON DUPLICATE KEY UPDATE
-                stmt = insert(DailyStats).values(stats)
-                
-                # Ne pas inclure les clés étrangères dans la mise à jour
-                stmt = stmt.on_duplicate_key_update(
-                    cases=stmt.inserted.cases,
-                    deaths=stmt.inserted.deaths,
-                    active=stmt.inserted.active,
-                    recovered=stmt.inserted.recovered,
-                    new_cases=stmt.inserted.new_cases,
-                    new_deaths=stmt.inserted.new_deaths,
-                    new_recovered=stmt.inserted.new_recovered
-                )
-                
-                db.execute(stmt)
-                processed += 1
-                break
+                # Vérifier si l'enregistrement existe déjà
+                existing_stat = db.query(DailyStats).filter(
+                    DailyStats.id_epidemic == stats['id_epidemic'],
+                    DailyStats.id_loc == stats['id_loc'],
+                    DailyStats.date == stats['date']
+                ).first()
+
+                if existing_stat:
+                    # Mettre à jour l'enregistrement existant
+                    for field, value in stats.items():
+                        setattr(existing_stat, field, value)
+                else:
+                    # Créer un nouvel enregistrement
+                    new_stat = DailyStats(**stats)
+                    db.add(new_stat)
+
+                try:
+                    db.commit()
+                    processed += 1
+                    break
+                except Exception as e:
+                    db.rollback()
+                    logger.error(f"Erreur lors de la mise à jour/insertion: {e}")
+                    retry_count += 1
+                    if retry_count == max_retries:
+                        logger.error(f"Échec après {max_retries} tentatives")
+                        continue
+                    sleep(2 ** retry_count)
             except Exception as e:
                 retry_count += 1
                 if retry_count == max_retries:
@@ -121,65 +161,79 @@ def insert_or_update_stats(db: Session, daily_stats: list) -> int:
 @backoff.on_exception(backoff.expo,
                      Exception,
                      max_tries=5)
-def process_generic_data(db: Session, df: pd.DataFrame, epidemic_name: str, source_id: int) -> int:
-    # Rechercher l'épidémie existante
-    epidemic = db.query(Epidemic).filter_by(name=epidemic_name.capitalize()).first()
-    
-    # Si l'épidémie n'existe pas, la créer
-    if not epidemic:
-        epidemic = Epidemic(
-            name=epidemic_name.capitalize(),
-            type="Viral",
-            description=f"Données pour {epidemic_name}",
-            start_date=df['date'].min(),
-            end_date=None
-        )
-        db.add(epidemic)
-        db.commit()
-        db.refresh(epidemic)  # Rafraîchir pour obtenir l'ID
-    
-    # Vérifier que l'épidémie a un ID valide
-    if not epidemic.id:
-        logger.error(f"Épidémie {epidemic_name} n'a pas d'ID valide après création")
-        return 0
-    
-    logger.info(f"Traitement des données pour l'épidémie {epidemic_name} (ID: {epidemic.id})")
-    
-    batch_size = 100
-    total_rows = len(df)
-    processed_rows = 0
-
-    for i in range(0, total_rows, batch_size):
-        batch = df.iloc[i:i+batch_size]
-        daily_stats = []
-        for _, row in batch.iterrows():
+def process_generic_data(db: Session, data: pd.DataFrame, source_id: int, epidemic_name: str, reset: bool = False) -> None:
+    """
+    Process generic data from a DataFrame and insert/update it in the database.
+    """
+    try:
+        # Vérifier si l'épidémie existe déjà
+        epidemic = db.query(Epidemic).filter(Epidemic.name == epidemic_name).first()
+        
+        if not epidemic:
+            # Créer une nouvelle épidémie si elle n'existe pas
+            epidemic = Epidemic(name=epidemic_name)
+            db.add(epidemic)
             try:
-                location_id = get_or_create_location(db, row)
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Erreur lors de la création de l'épidémie: {e}")
+                raise
+        
+        epidemic_id = epidemic.id
+        
+        # Si reset est True, supprimer les anciennes données pour cette épidémie
+        if reset:
+            try:
+                db.query(DailyStats).filter(
+                    DailyStats.id_epidemic == epidemic_id,
+                    DailyStats.id_source == source_id
+                ).delete()
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Erreur lors de la suppression des anciennes données: {e}")
+                raise
+
+        # Préparer les données pour l'insertion
+        daily_stats = []
+        for _, row in data.iterrows():
+            try:
+                # Get location ID, passing either the location string or the full row depending on data structure
+                location_id = get_or_create_location(db, row['location'] if isinstance(row['location'], str) else row)
+                if not location_id:
+                    logger.error(f"Location non trouvée/créée pour: {row['location']}")
+                    continue
+
                 stats = {
-                    'id_epidemic': epidemic.id,  # Utiliser l'ID de l'épidémie
+                    'id_epidemic': epidemic_id,
                     'id_source': source_id,
                     'id_loc': location_id,
                     'date': row['date'],
-                    'cases': int(row.get('cases', 0)),
-                    'deaths': int(row.get('deaths', 0)),
-                    'recovered': int(row.get('recovered', 0)),
-                    'active': int(row.get('active', 0)),
-                    'new_cases': int(row.get('new_cases', 0)),
-                    'new_deaths': int(row.get('new_deaths', 0)),
-                    'new_recovered': int(row.get('new_recovered', 0))
+                    'cases': row.get('cases', 0) if hasattr(row, 'get') else 0,
+                    'deaths': row.get('deaths', 0) if hasattr(row, 'get') else 0,
+                    'recovered': row.get('recovered', 0) if hasattr(row, 'get') else 0,
+                    'active': row.get('active', 0) if hasattr(row, 'get') else 0,
+                    'new_cases': row.get('new_cases', 0) if hasattr(row, 'get') else 0,
+                    'new_deaths': row.get('new_deaths', 0) if hasattr(row, 'get') else 0,
+                    'new_recovered': row.get('new_recovered', 0) if hasattr(row, 'get') else 0
                 }
                 daily_stats.append(stats)
+
             except Exception as e:
-                logger.error(f"Erreur ligne batch: {e}")
+                logger.error(f"Erreur lors du traitement de la ligne: {e}")
                 continue
 
+        # Insérer ou mettre à jour les statistiques par lots
         if daily_stats:
             processed = insert_or_update_stats(db, daily_stats)
-            processed_rows += processed
+            logger.info(f"Nombre d'enregistrements traités: {processed}")
+        else:
+            logger.warning("Aucune donnée à traiter")
 
-        sleep(0.01)
-
-    return processed_rows
+    except Exception as e:
+        logger.error(f"Erreur lors du traitement des données: {e}")
+        raise
 
 @backoff.on_exception(backoff.expo,
                      (SQLAlchemyError, OperationalError),
@@ -264,13 +318,13 @@ def extract_and_load_datasets(db: Session):
                             df = clean_dataset(df, dataset_type=name, file_name=os.path.basename(file))
                             logger.info(f"Données nettoyées pour {file}")
                             
-                            rows = process_generic_data(db, df, name, data_source.id)
-                            logger.info(f"Traitement terminé pour {file}: {rows} lignes traitées")
+                            process_generic_data(db, df, data_source.id, name, reset=False)
+                            logger.info(f"Traitement terminé pour {file}: {len(df)} lignes traitées")
                             
                             results.append({
                                 "dataset": name,
                                 "file": os.path.basename(file),
-                                "rows": rows,
+                                "rows": len(df),
                                 "status": "success"
                             })
                             break
