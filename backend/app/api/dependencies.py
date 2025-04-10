@@ -1,14 +1,14 @@
-from fastapi import Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from typing import Generator
-from ..db.session import get_db
+from sqlalchemy.orm import Session
+from ..db.session import engine
 
-# Dépendance pour obtenir la session de base de données
-def get_db_session() -> Session:
-    db = next(get_db())
+def get_db_session() -> Generator[Session, None, None]:
+    """
+    Dépendance pour obtenir une session de base de données.
+    La session est automatiquement fermée à la fin de la requête.
+    """
+    session = Session(engine)
     try:
-        yield db
+        yield session
     finally:
-        db.close()
-
-# Autres dépendances à ajouter ici (authentification, autorisation, etc.) 
+        session.close() 

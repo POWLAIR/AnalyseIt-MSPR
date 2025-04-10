@@ -1,134 +1,143 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import AdminQuickAccess from '../components/AdminQuickAccess';
-import Card from '../components/Card';
+import { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import DailyStatsManager from "../features/management/DailyStatsManager";
+import DataSourceManager from "../features/management/DataSourceManager";
+import EpidemicManager from "../features/management/EpidemicManager";
+import LocationManager from "../features/management/LocationManager";
+import PageWrapper from "../components/shared/PageWrapper";
+import { Button } from "../components/ui/button";
+import { apiClient } from "../lib/api";
 
 export default function AdminPage() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [stats, setStats] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        // Dans une implémentation réelle, nous ferions un appel API ici
-        // const response = await fetch('/api/admin/stats');
-        // const data = await response.json();
-        // setStats(data);
-        
-        // Pour l'instant, nous signalons juste que les données ne sont pas disponibles
-        setStats(null);
-        setError("Les données d'administration ne sont pas encore disponibles.");
-      } catch (err) {
-        setError("Erreur lors du chargement des données d'administration.");
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
+    const handleInitDb = async (reset: boolean = false) => {
+        try {
+            setLoading(true);
+            setError(null);
+            setSuccess(null);
+            await apiClient.initDatabase(reset);
+            setSuccess(`Base de données ${reset ? 'réinitialisée' : 'initialisée'} avec succès`);
+        } catch (err) {
+            setError('Une erreur est survenue lors de l\'initialisation de la base de données');
+            console.error('Erreur:', err);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    fetchData();
-  }, []);
+    const handleRunETL = async (reset: boolean = false) => {
+        try {
+            setLoading(true);
+            setError(null);
+            setSuccess(null);
+            await apiClient.runETL(reset);
+            setSuccess(`Processus ETL exécuté avec succès${reset ? ' (données réinitialisées)' : ''}`);
+        } catch (err) {
+            setError('Une erreur est survenue lors de l\'exécution du processus ETL');
+            console.error('Erreur:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  return (
-    <div className="space-y-8">
-      <section className="glass-card p-8 animate-fadeIn">
-        <h1 className="text-3xl font-bold mb-4 text-primary-950 dark:text-white">
-          Administration
-        </h1>
-        <p className="text-lg text-text-primary dark:text-gray-300 mb-6">
-          Gérez les données et configurations de la plateforme dans cet espace d'administration.
-        </p>
-      </section>
-      
-      {/* Statistiques d'administration */}
-      <section>
-        <h2 className="text-2xl font-bold mb-4 text-primary-950 dark:text-white">Aperçu des données</h2>
-        
-        {isLoading ? (
-          <div className="glass-card p-8 text-center">
-            <div className="animate-pulse">
-              <div className="text-text-primary dark:text-gray-300">Chargement des données...</div>
-            </div>
-          </div>
-        ) : error ? (
-          <div className="glass-card p-8">
-            <div className="text-text-primary dark:text-gray-300 text-center">
-              {error}
-            </div>
-            <div className="flex justify-center mt-4">
-              <button className="glass-button">
-                Configurer les sources de données
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <Card
-              title="Pandémies"
-              value={stats?.pandemics || "—"}
-              description="Enregistrées au total"
-            />
-            <Card
-              title="Entrées"
-              value={stats?.entries || "—"}
-              description="Entrées journalières"
-            />
-            <Card
-              title="Localités"
-              value={stats?.locations || "—"}
-              description="Zones surveillées"
-            />
-            <Card
-              title="Sources"
-              value={stats?.sources || "—"}
-              description="Sources de données"
-            />
-          </div>
-        )}
-      </section>
+    return (
+        <PageWrapper>
+            <div className="container mx-auto py-6">
+                <h1 className="text-3xl font-bold mb-6">Administration</h1>
 
-      {/* Section accès rapide admin */}
-      <AdminQuickAccess />
-      
-      {/* Section historique récent */}
-      <section className="glass-card p-6">
-        <h2 className="text-xl font-bold mb-4 text-primary-950 dark:text-white">Activité récente</h2>
-        {isLoading ? (
-          <div className="animate-pulse p-4">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-4"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
-          </div>
-        ) : error ? (
-          <div className="text-text-primary dark:text-gray-300 text-center p-6">
-            Aucune activité récente disponible.
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-lg border border-glass">
-            <table className="min-w-full divide-y divide-glass">
-              <thead className="bg-primary-50/70 dark:bg-primary-900/30">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-primary dark:text-gray-300 uppercase tracking-wider">Action</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-primary dark:text-gray-300 uppercase tracking-wider">Entité</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-primary dark:text-gray-300 uppercase tracking-wider">Utilisateur</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-primary dark:text-gray-300 uppercase tracking-wider">Date</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm divide-y divide-glass">
-                {/* Historique sera alimenté dynamiquement depuis l'API */}
-                <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center text-text-secondary dark:text-gray-400">
-                    Aucune activité récente à afficher
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-    </div>
-  );
+                {/* Boutons d'administration de la base de données */}
+                <div className="glass-card p-6 mb-8">
+                    <h2 className="text-xl font-semibold mb-4">Gestion de la base de données</h2>
+                    <div className="flex flex-wrap gap-4">
+                        <Button
+                            onClick={() => handleInitDb(false)}
+                            disabled={loading}
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                            {loading ? 'Chargement...' : 'Initialiser la base de données'}
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                if (window.confirm('Êtes-vous sûr de vouloir réinitialiser la structure de la base de données ? Cela supprimera toutes les tables existantes.')) {
+                                    handleInitDb(true);
+                                }
+                            }}
+                            disabled={loading}
+                            className="bg-orange-600 hover:bg-orange-700 text-white"
+                        >
+                            {loading ? 'Chargement...' : 'Réinitialiser la structure'}
+                        </Button>
+                        <Button
+                            onClick={() => handleRunETL(false)}
+                            disabled={loading}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                            {loading ? 'Chargement...' : 'Exécuter le processus ETL'}
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                if (window.confirm('Êtes-vous sûr de vouloir réinitialiser toutes les données avant d\'exécuter le processus ETL ? Cela supprimera toutes les données existantes.')) {
+                                    handleRunETL(true);
+                                }
+                            }}
+                            disabled={loading}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {loading ? 'Chargement...' : 'Réinitialiser et exécuter ETL'}
+                        </Button>
+                    </div>
+
+                    <div className="mt-4 text-sm text-gray-500">
+                        <p><strong>Initialiser la base de données :</strong> Crée les tables nécessaires si elles n'existent pas.</p>
+                        <p><strong>Réinitialiser la structure :</strong> Supprime et recrée toutes les tables (attention : perte de données).</p>
+                        <p><strong>Exécuter le processus ETL :</strong> Charge les données depuis les sources externes sans supprimer les données existantes.</p>
+                        <p><strong>Réinitialiser et exécuter ETL :</strong> Supprime toutes les données existantes avant de charger de nouvelles données.</p>
+                    </div>
+
+                    {error && (
+                        <div className="mt-4 p-4 bg-red-100 text-red-700 rounded-lg">
+                            {error}
+                        </div>
+                    )}
+
+                    {success && (
+                        <div className="mt-4 p-4 bg-green-100 text-green-700 rounded-lg">
+                            {success}
+                        </div>
+                    )}
+                </div>
+
+                {/* Onglets de gestion */}
+                <Tabs defaultValue="locations" className="w-full">
+                    <TabsList className="grid w-full grid-cols-4">
+                        <TabsTrigger value="locations">Localisations</TabsTrigger>
+                        <TabsTrigger value="epidemics">Épidémies</TabsTrigger>
+                        <TabsTrigger value="dailyStats">Statistiques Journalières</TabsTrigger>
+                        <TabsTrigger value="dataSources">Sources de Données</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="locations" className="mt-6">
+                        <LocationManager />
+                    </TabsContent>
+
+                    <TabsContent value="epidemics" className="mt-6">
+                        <EpidemicManager />
+                    </TabsContent>
+
+                    <TabsContent value="dailyStats" className="mt-6">
+                        <DailyStatsManager />
+                    </TabsContent>
+
+                    <TabsContent value="dataSources" className="mt-6">
+                        <DataSourceManager />
+                    </TabsContent>
+                </Tabs>
+            </div>
+        </PageWrapper>
+    );
 } 

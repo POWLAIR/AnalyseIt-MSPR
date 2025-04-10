@@ -34,6 +34,7 @@ services:
       DB_PORT: 3306
       DB_NAME: pandemics_db
       SECRET_KEY: "your-secret-key-here"
+      PYTHONPATH: /app
     volumes:
       - ./backend:/app
     depends_on:

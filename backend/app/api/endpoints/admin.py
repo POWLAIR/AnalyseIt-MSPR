@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import inspect, text
 import subprocess
@@ -8,6 +8,11 @@ import logging
 from ...db.session import engine
 from ...db.models.base import Base
 from ..dependencies import get_db_session
+from ...services.data_extraction import extract_and_load_datasets
+from fastapi.responses import StreamingResponse
+import asyncio
+import json
+from typing import AsyncGenerator
 
 # Configurer le logger
 logger = logging.getLogger(__name__)
@@ -69,6 +74,21 @@ async def initialize_database(
             detail=f"Erreur lors de l'initialisation de la base de données: {str(e)}"
         )
 
+@router.get("/extract-data", response_model=dict)
+async def extract_data(db: Session = Depends(get_db_session)):
+    """
+    Extrait les données des datasets Kaggle et les charge dans la base de données.
+    """
+    try:
+        result = extract_and_load_datasets(db)
+        return result
+    except Exception as e:
+        logger.error(f"Erreur lors de l'extraction des données: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur lors de l'extraction des données: {str(e)}"
+        )
+
 @router.post("/run-etl", response_model=dict)
 async def run_etl(
     background_tasks: BackgroundTasks, 
@@ -90,16 +110,16 @@ async def run_etl(
                 epidemic_repository.delete_epidemic(db, epidemic_id=epidemic.id)
             logger.info("Données existantes supprimées avec succès")
         
-        # Charger des données de test dans la base de données
-        logger.info("Chargement des données de test...")
-        from ...db.scripts import load_test_data
-        load_test_data.load_data(db)
+        # Extraire et charger les données depuis Kaggle
+        logger.info("Extraction et chargement des données depuis Kaggle...")
+        result = extract_and_load_datasets(db)
         logger.info("Données chargées avec succès")
         
         return {
             "success": True,
             "message": "Données chargées avec succès! Processus ETL complété.",
-            "reset": reset
+            "reset": reset,
+            "details": result
         }
     except Exception as e:
         logger.error(f"Erreur lors du chargement des données: {str(e)}")
