@@ -6,20 +6,25 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: 'default' | 'sm' | 'lg' | 'icon';
 }
 
-export function Button({
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   className = '',
   variant = 'default',
   size = 'default',
   ...props
-}: ButtonProps) {
+}, ref) => {
   const baseStyles = UI_CONFIG.button.base;
   const variantStyles = UI_CONFIG.button.variants[variant];
   const sizeStyles = UI_CONFIG.button.sizes[size];
 
   return (
     <button
+      ref={ref}
       className={`${baseStyles} ${variantStyles} ${sizeStyles} ${className}`}
       {...props}
     />
   );
-} 
+});
+
+Button.displayName = "Button";
+
+export { Button }; 

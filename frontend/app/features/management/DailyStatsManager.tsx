@@ -77,7 +77,7 @@ export default function DailyStatsManager() {
             ]);
 
             setDailyStats(statsData);
-            setEpidemics(epidemicsData);
+            setEpidemics(epidemicsData.items);
             setLocations(locationsData);
             setDataSources(sourcesData);
         } catch (error) {

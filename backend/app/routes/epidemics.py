@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from ..db.session import get_db
 from ..db.models.base import Epidemic, DailyStats, Localisation
-from typing import List, Dict
+from typing import List, Dict, Optional
 import logging
 from datetime import datetime, timedelta
 
@@ -11,19 +11,75 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+@router.get("")
 @router.get("/")
-def get_epidemics(db: Session = Depends(get_db)):
+def get_epidemics(
+    db: Session = Depends(get_db),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
+    search: Optional[str] = None,
+    type: Optional[str] = None,
+    country: Optional[str] = None,
+    sort_by: Optional[str] = "name",
+    sort_desc: bool = False
+):
     """
-    Récupère la liste des épidémies.
+    Récupère la liste des épidémies avec pagination et filtrage.
     """
     try:
-        epidemics = db.query(Epidemic).all()
-        if not epidemics:
-            return []
-        return epidemics
+        # Construire la requête de base
+        query = db.query(Epidemic)
+
+        # Appliquer les filtres
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                (Epidemic.name.ilike(search_term)) |
+                (Epidemic.type.ilike(search_term)) |
+                (Epidemic.country.ilike(search_term))
+            )
+        
+        if type and type != "all":
+            query = query.filter(Epidemic.type == type)
+            
+        if country and country != "all":
+            query = query.filter(Epidemic.country == country)
+
+        # Appliquer le tri
+        if sort_by:
+            sort_column = getattr(Epidemic, {
+                "name": "name",
+                "cases": "total_cases",
+                "deaths": "total_deaths",
+                "date": "start_date"
+            }.get(sort_by, "name"))
+            
+            if sort_desc:
+                query = query.order_by(desc(sort_column))
+            else:
+                query = query.order_by(sort_column)
+
+        # Calculer le nombre total d'éléments
+        total = query.count()
+
+        # Appliquer la pagination
+        epidemics = query.offset(skip).limit(limit).all()
+
+        # Préparer la réponse
+        return {
+            "items": epidemics,
+            "total": total,
+            "page": skip // limit + 1,
+            "pages": (total + limit - 1) // limit
+        }
     except Exception as e:
         logger.error(f"Erreur lors de la récupération des épidémies: {str(e)}")
-        return []
+        return {
+            "items": [],
+            "total": 0,
+            "page": 1,
+            "pages": 1
+        }
 
 @router.get("/stats/dashboard")
 def get_dashboard_stats(db: Session = Depends(get_db)):
