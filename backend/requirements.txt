@@ -15,3 +15,5 @@ pandas
 numpy
 alembic==1.13.1
 kagglehub[pandas-datasets]
+rich==13.7.0
+backoff

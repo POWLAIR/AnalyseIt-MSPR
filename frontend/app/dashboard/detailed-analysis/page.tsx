@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { apiClient, DetailedPandemic } from '../../lib/api';
-import DetailedCharts from '../../components/DetailedCharts';
+import DetailedCharts from '../../components/charts/DetailedCharts';
+import PageWrapper from '../../components/shared/PageWrapper';
 
-export default function DetailedAnalysis() {
+function DetailedAnalysisContent() {
   const [detailedData, setDetailedData] = useState<DetailedPandemic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,15 +21,15 @@ export default function DetailedAnalysis() {
   const loadDetailedData = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const skip = (currentPage - 1) * pageSize;
       const result = await apiClient.getDetailedData(skip, pageSize);
-      
+
       if (result && result.epidemics && result.epidemics.length > 0) {
         setDetailedData(result.epidemics);
         setTotalCount(result.totalCount);
-        
+
         // Sélectionner la première pandémie par défaut
         if (!selectedPandemicId && result.epidemics.length > 0) {
           setSelectedPandemicId(result.epidemics[0].id);
@@ -66,10 +67,10 @@ export default function DetailedAnalysis() {
     <div className="space-y-8 animate-fadeIn">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h1 className="text-3xl font-bold">Analyse détaillée des pandémies</h1>
-        
+
         <div className="flex items-center space-x-2">
-          <button 
-            onClick={() => loadDetailedData()} 
+          <button
+            onClick={() => loadDetailedData()}
             className="text-primary-600 hover:text-primary-800 text-sm flex items-center space-x-1 p-2 rounded hover:bg-gray-100"
             title="Rafraîchir les données"
           >
@@ -99,32 +100,29 @@ export default function DetailedAnalysis() {
                 <button
                   key={pandemic.id}
                   onClick={() => handlePandemicSelect(pandemic.id)}
-                  className={`w-full text-left p-3 rounded-md transition-colors ${
-                    selectedPandemicId === pandemic.id 
-                      ? 'bg-primary-50 border-l-4 border-l-primary-500' 
-                      : 'hover:bg-gray-50 border-l-4 border-l-transparent'
-                  }`}
+                  className={`w-full text-left p-3 rounded-lg transition-colors ${selectedPandemicId === pandemic.id
+                    ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-900 dark:text-primary-100'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
                 >
-                  <div className="font-medium text-sm">{pandemic.name}</div>
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>{pandemic.country}</span>
-                    <span>{pandemic.active ? 'Active' : 'Terminée'}</span>
+                  <div className="font-medium">{pandemic.name}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {pandemic.country} • {pandemic.type}
                   </div>
                 </button>
               ))}
             </div>
-            
+
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
-                  className={`px-3 py-1 rounded text-sm ${
-                    currentPage === 1 
-                      ? 'text-gray-400 cursor-not-allowed' 
-                      : 'text-primary-600 hover:bg-primary-50'
-                  }`}
+                  className={`px-3 py-1 rounded text-sm ${currentPage === 1
+                    ? 'text-gray-400 cursor-not-allowed'
+                    : 'text-primary-600 hover:bg-primary-50'
+                    }`}
                 >
                   Précédent
                 </button>
@@ -134,11 +132,10 @@ export default function DetailedAnalysis() {
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
-                  className={`px-3 py-1 rounded text-sm ${
-                    currentPage === totalPages 
-                      ? 'text-gray-400 cursor-not-allowed' 
-                      : 'text-primary-600 hover:bg-primary-50'
-                  }`}
+                  className={`px-3 py-1 rounded text-sm ${currentPage === totalPages
+                    ? 'text-gray-400 cursor-not-allowed'
+                    : 'text-primary-600 hover:bg-primary-50'
+                    }`}
                 >
                   Suivant
                 </button>
@@ -146,7 +143,7 @@ export default function DetailedAnalysis() {
             )}
           </div>
         </div>
-        
+
         <div className="lg:col-span-3 space-y-8">
           {!selectedPandemic ? (
             <div className="glass-card p-6 text-center">
@@ -162,5 +159,13 @@ export default function DetailedAnalysis() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DetailedAnalysis() {
+  return (
+    <PageWrapper>
+      <DetailedAnalysisContent />
+    </PageWrapper>
   );
 } 

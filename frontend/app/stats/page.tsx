@@ -1,264 +1,219 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { apiClient } from '../lib/api';
-import Link from 'next/link';
-
-interface DailyStatsEntry {
-  id: string;
-  epidemic: string;
-  date: string;
-  location: string;
-  cases: number;
-  deaths: number;
-  active: number;
-  recovered: number;
-}
+import { apiClient, DashboardStats } from '../lib/api';
+import PageWrapper from '../components/shared/PageWrapper';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import LineChart from '../components/charts/LineChart';
+import PieChart from '../components/charts/PieChart';
+import BarChart from '../components/charts/BarChart';
+import { Activity, Users, Skull, AlertCircle } from 'lucide-react';
 
 export default function StatsPage() {
-  const [stats, setStats] = useState<DailyStatsEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({
-    epidemic: '',
-    location: '',
-    dateFrom: '',
-    dateTo: '',
-  });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [stats, setStats] = useState<DashboardStats | null>(null);
 
-  useEffect(() => {
-    // Charger les données
-    loadStats();
-  }, []);
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const dashboardStats = await apiClient.getDashboardStats();
+                setStats(dashboardStats);
+                setLoading(false);
+            } catch (err) {
+                setError('Erreur lors du chargement des données');
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
 
-  const loadStats = async () => {
-    setLoading(true);
-    try {
-      // Cette API n'existe pas encore, nous utilisons des données de test
-      // const data = await apiClient.getDailyStats(filters);
-      
-      // Données de test pour la démo
-      const mockData: DailyStatsEntry[] = [
-        {
-          id: '1',
-          epidemic: 'COVID-19',
-          date: '2023-01-01',
-          location: 'France',
-          cases: 2500,
-          deaths: 45,
-          active: 1200,
-          recovered: 1255
-        },
-        {
-          id: '2',
-          epidemic: 'COVID-19',
-          date: '2023-01-02',
-          location: 'France',
-          cases: 2700,
-          deaths: 50,
-          active: 1300,
-          recovered: 1350
-        },
-        {
-          id: '3',
-          epidemic: 'COVID-19',
-          date: '2023-01-01',
-          location: 'Allemagne',
-          cases: 3500,
-          deaths: 65,
-          active: 1800,
-          recovered: 1635
-        },
-        {
-          id: '4',
-          epidemic: 'Grippe Espagnole',
-          date: '1918-10-01',
-          location: 'États-Unis',
-          cases: 25000,
-          deaths: 1200,
-          active: 15000,
-          recovered: 8800
-        },
-        {
-          id: '5',
-          epidemic: 'Grippe Espagnole',
-          date: '1918-10-02',
-          location: 'États-Unis',
-          cases: 27500,
-          deaths: 1350,
-          active: 16500,
-          recovered: 9650
-        },
-      ];
-      
-      setStats(mockData);
-    } catch (error) {
-      console.error('Failed to load stats:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const applyFilters = () => {
-    // Dans une implémentation réelle, cette fonction ferait un appel API avec les filtres
-    // Pour la démo, filtrons les données localement
-    loadStats();
-  };
-
-  const resetFilters = () => {
-    setFilters({
-      epidemic: '',
-      location: '',
-      dateFrom: '',
-      dateTo: '',
-    });
-    loadStats();
-  };
-
-  // Fonction pour filtrer les données côté client (pour la démo)
-  const filteredStats = stats.filter(stat => {
-    if (filters.epidemic && !stat.epidemic.toLowerCase().includes(filters.epidemic.toLowerCase())) {
-      return false;
-    }
-    if (filters.location && !stat.location.toLowerCase().includes(filters.location.toLowerCase())) {
-      return false;
-    }
-    if (filters.dateFrom && new Date(stat.date) < new Date(filters.dateFrom)) {
-      return false;
-    }
-    if (filters.dateTo && new Date(stat.date) > new Date(filters.dateTo)) {
-      return false;
-    }
-    return true;
-  });
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Statistiques détaillées</h1>
-        <p className="text-gray-600 dark:text-gray-300">
-          Explorez les données épidémiologiques journalières par lieu et période
-        </p>
-      </div>
-
-      {/* Filtres */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-4">Filtres</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Pandémie
-            </label>
-            <input
-              type="text"
-              value={filters.epidemic}
-              onChange={(e) => setFilters({...filters, epidemic: e.target.value})}
-              placeholder="Ex: COVID-19"
-              className="w-full p-2 border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Localisation
-            </label>
-            <input
-              type="text"
-              value={filters.location}
-              onChange={(e) => setFilters({...filters, location: e.target.value})}
-              placeholder="Ex: France"
-              className="w-full p-2 border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Date de début
-            </label>
-            <input
-              type="date"
-              value={filters.dateFrom}
-              onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
-              className="w-full p-2 border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Date de fin
-            </label>
-            <input
-              type="date"
-              value={filters.dateTo}
-              onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
-              className="w-full p-2 border border-gray-300 rounded-md"
-            />
-          </div>
-        </div>
-        <div className="flex justify-end space-x-2 mt-4">
-          <button
-            onClick={resetFilters}
-            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-          >
-            Réinitialiser
-          </button>
-          <button
-            onClick={applyFilters}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Appliquer les filtres
-          </button>
-        </div>
-      </div>
-
-      {/* Tableau des données */}
-      <div className="bg-white dark:bg-gray-800 overflow-x-auto rounded-lg shadow">
-        {loading ? (
-          <div className="p-4 text-center">Chargement...</div>
-        ) : filteredStats.length === 0 ? (
-          <div className="p-4 text-center">Aucune donnée trouvée</div>
-        ) : (
-          <>
-            <table className="w-full text-sm text-left text-gray-700 dark:text-gray-300">
-              <thead className="text-xs uppercase bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-6 py-3">Pandémie</th>
-                  <th className="px-6 py-3">Date</th>
-                  <th className="px-6 py-3">Localisation</th>
-                  <th className="px-6 py-3">Cas</th>
-                  <th className="px-6 py-3">Décès</th>
-                  <th className="px-6 py-3">Actifs</th>
-                  <th className="px-6 py-3">Guéris</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredStats.map((stat) => (
-                  <tr key={stat.id} className="border-b dark:border-gray-700">
-                    <td className="px-6 py-4 font-medium">{stat.epidemic}</td>
-                    <td className="px-6 py-4">{new Date(stat.date).toLocaleDateString()}</td>
-                    <td className="px-6 py-4">{stat.location}</td>
-                    <td className="px-6 py-4">{stat.cases.toLocaleString()}</td>
-                    <td className="px-6 py-4">{stat.deaths.toLocaleString()}</td>
-                    <td className="px-6 py-4">{stat.active.toLocaleString()}</td>
-                    <td className="px-6 py-4">{stat.recovered.toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="p-4 bg-gray-50 dark:bg-gray-700 text-right">
-              <span className="text-sm text-gray-700 dark:text-gray-300">
-                Affichage de {filteredStats.length} entrées sur {stats.length} au total
-              </span>
+    if (loading) return (
+        <PageWrapper>
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
             </div>
-          </>
-        )}
-      </div>
+        </PageWrapper>
+    );
 
-      {/* Liens rapides */}
-      <div className="flex space-x-4">
-        <Link href="/dashboard" className="text-blue-600 hover:underline">
-          Voir le tableau de bord
-        </Link>
-        <Link href="/" className="text-blue-600 hover:underline">
-          Retour à l'accueil
-        </Link>
-      </div>
-    </div>
-  );
+    if (error) return (
+        <PageWrapper>
+            <div className="p-4 bg-red-100 text-red-700 rounded-lg">
+                {error}
+            </div>
+        </PageWrapper>
+    );
+
+    if (!stats) return null;
+
+    const statsCards = [
+        {
+            title: "Épidémies Totales",
+            value: stats.global_stats.total_epidemics,
+            description: "Nombre total d'épidémies enregistrées",
+            icon: <AlertCircle className="h-6 w-6 text-blue-500" />,
+            trend: null
+        },
+        {
+            title: "Épidémies Actives",
+            value: stats.global_stats.active_epidemics,
+            description: "Épidémies en cours",
+            icon: <Activity className="h-6 w-6 text-green-500" />,
+            trend: null
+        },
+        {
+            title: "Cas Totaux",
+            value: stats.global_stats.total_cases.toLocaleString(),
+            description: "Nombre total de cas",
+            icon: <Users className="h-6 w-6 text-orange-500" />,
+            trend: null
+        },
+        {
+            title: "Décès Totaux",
+            value: stats.global_stats.total_deaths.toLocaleString(),
+            description: "Nombre total de décès",
+            icon: <Skull className="h-6 w-6 text-red-500" />,
+            trend: null
+        }
+    ];
+
+    const chartData = {
+        dailyEvolution: {
+            labels: stats.daily_evolution.map(day => day.date),
+            datasets: [
+                {
+                    label: 'Nouveaux cas',
+                    data: stats.daily_evolution.map(day => day.new_cases),
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true
+                },
+                {
+                    label: 'Cas actifs',
+                    data: stats.daily_evolution.map(day => day.active_cases),
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    fill: true
+                }
+            ]
+        },
+        typeDistribution: {
+            labels: stats.type_distribution.map(type => type.type),
+            datasets: [{
+                data: stats.type_distribution.map(type => type.cases),
+                backgroundColor: [
+                    'rgba(59, 130, 246, 0.8)',
+                    'rgba(239, 68, 68, 0.8)',
+                    'rgba(16, 185, 129, 0.8)',
+                    'rgba(245, 158, 11, 0.8)'
+                ]
+            }]
+        },
+        geographicDistribution: {
+            labels: stats.geographic_distribution.map(geo => geo.country),
+            datasets: [{
+                label: 'Cas par pays',
+                data: stats.geographic_distribution.map(geo => geo.cases),
+                backgroundColor: 'rgba(59, 130, 246, 0.8)'
+            }]
+        }
+    };
+
+    return (
+        <PageWrapper>
+            <div className="space-y-8">
+                {/* En-tête */}
+                <div>
+                    <h1 className="text-3xl font-bold mb-2">Tableau de Bord</h1>
+                    <p className="text-gray-600">Vue d'ensemble des épidémies et leurs impacts</p>
+                </div>
+
+                {/* Cartes de statistiques */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {statsCards.map((card, index) => (
+                        <Card key={index} style={{ backgroundColor: 'white' }}>
+                            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                <CardTitle className="text-sm font-medium text-gray-500">
+                                    {card.title}
+                                </CardTitle>
+                                {card.icon}
+                            </CardHeader>
+                            <CardContent >
+                                <div className="text-2xl font-bold">{card.value}</div>
+                                <p className="text-xs text-gray-500 mt-1">{card.description}</p>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+
+                {/* Graphiques */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <Card style={{ backgroundColor: 'white' }}>
+                        <CardHeader>
+                            <CardTitle>Évolution Temporelle</CardTitle>
+                            <CardDescription>Évolution des cas sur les 30 derniers jours</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <LineChart data={chartData.dailyEvolution} />
+                        </CardContent>
+                    </Card>
+
+                    <Card style={{ backgroundColor: 'white' }}>
+                        <CardHeader>
+                            <CardTitle>Distribution par Type</CardTitle>
+                            <CardDescription>Répartition des cas par type d'épidémie</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <PieChart data={chartData.typeDistribution} />
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Top épidémies actives */}
+                <Card style={{ backgroundColor: 'white' }}>
+                    <CardHeader>
+                        <CardTitle>Top 5 des Épidémies Actives</CardTitle>
+                        <CardDescription>Les épidémies les plus importantes en cours</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b">
+                                        <th className="text-left py-3 px-4">Nom</th>
+                                        <th className="text-left py-3 px-4">Type</th>
+                                        <th className="text-left py-3 px-4">Pays</th>
+                                        <th className="text-right py-3 px-4">Cas</th>
+                                        <th className="text-right py-3 px-4">Décès</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {stats.top_active_epidemics.map((epidemic, index) => (
+                                        <tr key={epidemic.id} className="border-b last:border-0">
+                                            <td className="py-3 px-4">{epidemic.name}</td>
+                                            <td className="py-3 px-4">{epidemic.type}</td>
+                                            <td className="py-3 px-4">{epidemic.country}</td>
+                                            <td className="py-3 px-4 text-right">{epidemic.total_cases.toLocaleString()}</td>
+                                            <td className="py-3 px-4 text-right">{epidemic.total_deaths.toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Distribution géographique */}
+                <Card style={{ backgroundColor: 'white' }}>
+                    <CardHeader>
+                        <CardTitle>Distribution Géographique</CardTitle>
+                        <CardDescription>Répartition des cas par pays</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-[400px]">
+                        <BarChart data={chartData.geographicDistribution} />
+                    </CardContent>
+                </Card>
+            </div>
+        </PageWrapper>
+    );
 } 

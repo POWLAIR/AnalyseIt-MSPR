@@ -1,59 +1,58 @@
-import axios from 'axios';
+import axios from "axios";
 
-// Détermine l'URL de l'API en fonction de l'environnement
-const apiBaseUrl = 
-  typeof window === 'undefined' 
-  ? 'http://backend:8000'  // Côté serveur (SSR) utilise le nom du service Docker
-  : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'; // Côté client utilise localhost
-
-const api = axios.create({
-  baseURL: apiBaseUrl,
-  timeout: 5000,
-  headers: {
-    'Content-Type': 'application/json',
+// Définition du type EventSource si non disponible dans l'environnement
+declare global {
+  interface WindowEventMap {
+    message: MessageEvent;
+    error: Event;
   }
+
+  interface EventSource extends EventTarget {
+    readonly CONNECTING: 0;
+    readonly OPEN: 1;
+    readonly CLOSED: 2;
+    readonly readyState: number;
+    onmessage: ((this: EventSource, ev: MessageEvent) => any) | null;
+    onerror: ((this: EventSource, ev: Event) => any) | null;
+    close(): void;
+  }
+
+  var EventSource: {
+    prototype: EventSource;
+    new (url: string | URL, eventSourceInitDict?: EventSourceInit): EventSource;
+    readonly CONNECTING: 0;
+    readonly OPEN: 1;
+    readonly CLOSED: 2;
+  };
+}
+
+// Configuration de base d'Axios
+const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000",
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-// Intercepteur pour gérer les erreurs globalement
+// Intercepteur pour les réponses
 api.interceptors.response.use(
-  response => response,
-  error => {
-    // Construction d'un message d'erreur plus détaillé
-    let errorMessage = 'Erreur de communication avec le serveur';
-    
-    if (error.response) {
-      // Le serveur a répondu avec un code d'erreur
-      const status = error.response.status;
-      const data = error.response.data || {};
-      
-      switch (status) {
-        case 404:
-          errorMessage = 'Ressource non trouvée';
-          break;
-        case 422:
-          errorMessage = 'Données invalides';
-          if (data.detail) {
-            if (Array.isArray(data.detail)) {
-              errorMessage = `Validation échouée: ${data.detail.map((d: any) => d.msg).join(', ')}`;
-            } else {
-              errorMessage = `Validation échouée: ${data.detail}`;
-            }
-          }
-          break;
-        case 500:
-          errorMessage = 'Erreur interne du serveur';
-          break;
-        default:
-          errorMessage = `Erreur ${status}`;
-          break;
-      }
-    } else if (error.request) {
-      // La requête a été faite mais pas de réponse reçue
-      errorMessage = 'Aucune réponse du serveur - vérifiez votre connexion réseau';
+  (response) => response,
+  (error) => {
+    if (error.code === "ECONNABORTED") {
+      console.error(
+        "La requête a expiré. Le traitement des données prend plus de temps que prévu."
+      );
+      throw new Error(
+        "Le traitement des données prend plus de temps que prévu. Veuillez réessayer."
+      );
     }
-    
-    console.error('API Error:', errorMessage, error.message);
-    return Promise.reject(new Error(errorMessage));
+    if (!error.response) {
+      console.error("Erreur de connexion au serveur:", error.message);
+      throw new Error(
+        "Impossible de se connecter au serveur. Vérifiez votre connexion réseau."
+      );
+    }
+    return Promise.reject(error);
   }
 );
 
@@ -79,14 +78,25 @@ export interface PandemicData {
   recoveries: number;
 }
 
-export interface Location {
+export interface Localisation {
   id: number;
   country: string;
   region: string | null;
   iso_code: string | null;
 }
 
+export interface DataSource {
+  id: number;
+  source_type: string;
+  reference: string;
+  url: string;
+}
+
 export interface DailyStats {
+  id: number;
+  id_epidemic: number;
+  id_source: number;
+  id_loc: number;
   date: string;
   cases: number;
   active: number;
@@ -95,7 +105,9 @@ export interface DailyStats {
   new_cases: number;
   new_deaths: number;
   new_recovered: number;
-  location: Location;
+  epidemic: Pandemic;
+  location: Localisation;
+  source: DataSource;
 }
 
 export interface OverallStats {
@@ -119,7 +131,7 @@ export interface DetailedPandemic {
   active: boolean;
   overall_stats: OverallStats;
   daily_stats: DailyStats[];
-  affected_locations: Location[];
+  affected_locations: Localisation[];
 }
 
 export interface DetailedPandemicResponse {
@@ -140,29 +152,72 @@ export interface FilterParams {
   active?: boolean;
 }
 
+export type ProgressCallback = (data: {
+  type: "download" | "processing";
+  dataset?: string;
+  filename?: string;
+  progress?: number;
+  currentRows?: number;
+  totalRows?: number;
+}) => void;
+
+export interface DashboardStats {
+  global_stats: {
+    total_cases: number;
+    total_deaths: number;
+    total_epidemics: number;
+    active_epidemics: number;
+    mortality_rate: number;
+  };
+  type_distribution: Array<{
+    type: string;
+    cases: number;
+    deaths: number;
+  }>;
+  geographic_distribution: Array<{
+    country: string;
+    cases: number;
+    deaths: number;
+  }>;
+  daily_evolution: Array<{
+    date: string;
+    new_cases: number;
+    new_deaths: number;
+    active_cases: number;
+  }>;
+  top_active_epidemics: Array<{
+    id: number;
+    name: string;
+    type: string;
+    country: string;
+    total_cases: number;
+    total_deaths: number;
+  }>;
+}
+
 export const apiClient = {
   // Get all pandemics
   getPandemics: async (): Promise<Pandemic[]> => {
     try {
-      const response = await api.get('/api/v1/epidemics');
-      
+      const response = await api.get("/api/v1/epidemics");
+
       // Transformer les données du backend au format attendu par le frontend
       return response.data.map((item: any) => ({
         id: item.id.toString(),
         name: item.name,
-        type: item.type || 'Non spécifié',
-        country: item.country || 'Non spécifié',
+        type: item.type || "Non spécifié",
+        country: item.country || "Non spécifié",
         startDate: item.start_date,
         endDate: item.end_date,
         transmissionRate: item.transmission_rate || 0,
         mortalityRate: item.mortality_rate || 0,
         totalCases: item.total_cases || 0,
         totalDeaths: item.total_deaths || 0,
-        description: item.description || '',
+        description: item.description || "",
         active: item.end_date === null, // Une pandémie est active si elle n'a pas de date de fin
       }));
     } catch (error) {
-      console.error('Failed to fetch epidemics:', error);
+      console.error("Failed to fetch epidemics:", error);
       return [];
     }
   },
@@ -172,19 +227,19 @@ export const apiClient = {
     try {
       const response = await api.get(`/api/v1/epidemics/${id}`);
       const item = response.data;
-      
+
       return {
         id: item.id.toString(),
         name: item.name,
-        type: item.type || 'Non spécifié',
-        country: item.country || 'Non spécifié',
+        type: item.type || "Non spécifié",
+        country: item.country || "Non spécifié",
         startDate: item.start_date,
         endDate: item.end_date,
         transmissionRate: item.transmission_rate || 0,
         mortalityRate: item.mortality_rate || 0,
         totalCases: item.total_cases || 0,
         totalDeaths: item.total_deaths || 0,
-        description: item.description || '',
+        description: item.description || "",
         active: item.end_date === null,
       };
     } catch (error) {
@@ -207,22 +262,22 @@ export const apiClient = {
   // Get filter options (countries, types)
   getFilterOptions: async (): Promise<FilterOptions> => {
     try {
-      const response = await api.get('/api/v1/epidemics/filters');
-      
+      const response = await api.get("/api/v1/epidemics/filters");
+
       // Assurer que les listes sont triées
       const countries = response.data?.countries || [];
       const types = response.data?.types || [];
-      
-      return { 
-        countries: countries.sort(), 
-        types: types.sort() 
+
+      return {
+        countries: countries.sort(),
+        types: types.sort(),
       };
     } catch (error) {
-      console.error('Failed to fetch filter options:', error);
+      console.error("Failed to fetch filter options:", error);
       // En cas d'erreur, fournir un ensemble minimal d'options en attendant que le backend soit disponible
-      return { 
-        countries: ['France', 'États-Unis', 'Chine', 'Royaume-Uni', 'Japon'], 
-        types: ['Viral', 'Bactérien', 'Parasitaire', 'Fongique'] 
+      return {
+        countries: ["France", "États-Unis", "Chine", "Royaume-Uni", "Japon"],
+        types: ["Viral", "Bactérien", "Parasitaire", "Fongique"],
       };
     }
   },
@@ -237,27 +292,27 @@ export const apiClient = {
       if (filters.startDate) cleanFilters.start_date = filters.startDate;
       if (filters.endDate) cleanFilters.end_date = filters.endDate;
       if (filters.active !== undefined) cleanFilters.active = filters.active;
-      
-      const response = await api.get('/api/v1/epidemics', { 
-        params: cleanFilters
+
+      const response = await api.get("/api/v1/epidemics", {
+        params: cleanFilters,
       });
-      
+
       return response.data.map((item: any) => ({
         id: item.id.toString(),
         name: item.name,
-        type: item.type || 'Non spécifié',
-        country: item.country || 'Non spécifié',
+        type: item.type || "Non spécifié",
+        country: item.country || "Non spécifié",
         startDate: item.start_date,
         endDate: item.end_date,
         transmissionRate: item.transmission_rate || 0,
         mortalityRate: item.mortality_rate || 0,
         totalCases: item.total_cases || 0,
         totalDeaths: item.total_deaths || 0,
-        description: item.description || '',
+        description: item.description || "",
         active: item.end_date === null,
       }));
     } catch (error) {
-      console.error('Failed to fetch filtered epidemics:', error);
+      console.error("Failed to fetch filtered epidemics:", error);
       return [];
     }
   },
@@ -268,12 +323,18 @@ export const apiClient = {
     activePandemics: number;
     averageTransmissionRate: number;
     averageMortalityRate: number;
+    latestStats: {
+      cases: number;
+      deaths: number;
+      recovered: number;
+      date: string;
+    };
   } | null> => {
     try {
-      const response = await api.get('/api/v1/epidemics/stats');
+      const response = await api.get("/api/v1/stats/overview");
       return response.data;
     } catch (error) {
-      console.error('Failed to fetch pandemic stats:', error);
+      console.error("Failed to fetch pandemic stats:", error);
       return null;
     }
   },
@@ -284,13 +345,173 @@ export const apiClient = {
     limit: number = 20
   ): Promise<DetailedPandemicResponse> => {
     try {
-      const response = await api.get('/api/v1/epidemics/detailed-data', {
-        params: { skip, limit }
+      const response = await api.get("/api/v1/epidemics/detailed-data", {
+        params: { skip, limit },
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to fetch detailed epidemic data:', error);
+      console.error("Failed to fetch detailed epidemic data:", error);
       return { epidemics: [], totalCount: 0 };
     }
   },
-}; 
+
+  // Initialize database
+  initDatabase: async (
+    reset: boolean = false
+  ): Promise<{
+    success: boolean;
+    message: string;
+    reset: boolean;
+  }> => {
+    try {
+      const response = await api.post("/api/v1/admin/init-db", null, {
+        params: { reset },
+      });
+      return {
+        success: true,
+        message:
+          response.data.message || "Base de données initialisée avec succès",
+        reset: reset,
+      };
+    } catch (error: any) {
+      console.error("Failed to initialize database:", error);
+      throw new Error(
+        error.response?.data?.detail ||
+          "Erreur lors de l'initialisation de la base de données"
+      );
+    }
+  },
+
+  // Run ETL process
+  runETL: async (reset: boolean = false) => {
+    try {
+      // Lancement du processus ETL sans timeout
+      const response = await api.post("/api/v1/admin/run-etl", null, {
+        params: { reset },
+        timeout: 0, // Désactive le timeout pour cette requête spécifique
+      });
+
+      return {
+        success: true,
+        message: response.data.message,
+        details: response.data.details,
+      };
+    } catch (error: any) {
+      console.error("Failed to run ETL process:", error);
+      throw new Error(
+        error.response?.data?.detail || "Erreur lors du processus ETL"
+      );
+    }
+  },
+
+  // Pandemic CRUD operations
+  createEpidemic: async (data: Omit<Pandemic, "id">): Promise<Pandemic> => {
+    const response = await api.post("/api/v1/epidemics", data);
+    return response.data;
+  },
+
+  updateEpidemic: async (
+    id: string,
+    data: Partial<Pandemic>
+  ): Promise<Pandemic> => {
+    const response = await api.put(`/api/v1/epidemics/${id}`, data);
+    return response.data;
+  },
+
+  deleteEpidemic: async (id: string): Promise<void> => {
+    await api.delete(`/api/v1/epidemics/${id}`);
+  },
+
+  // Daily Stats CRUD operations
+  getDailyStats: async (): Promise<DailyStats[]> => {
+    try {
+      const response = await api.get("/api/v1/daily-stats");
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch daily stats:", error);
+      return [];
+    }
+  },
+
+  createDailyStats: async (
+    data: Omit<DailyStats, "id" | "epidemic" | "location" | "source">
+  ): Promise<DailyStats> => {
+    const response = await api.post("/api/v1/daily-stats", data);
+    return response.data;
+  },
+
+  updateDailyStats: async (
+    id: number,
+    data: Partial<DailyStats>
+  ): Promise<DailyStats> => {
+    const response = await api.put(`/api/v1/daily-stats/${id}`, data);
+    return response.data;
+  },
+
+  deleteDailyStats: async (id: number): Promise<void> => {
+    await api.delete(`/api/v1/daily-stats/${id}`);
+  },
+
+  // Location CRUD operations
+  getLocations: async (): Promise<Localisation[]> => {
+    const response = await api.get("/api/v1/locations");
+    return response.data;
+  },
+
+  createLocation: async (
+    data: Omit<Localisation, "id">
+  ): Promise<Localisation> => {
+    const response = await api.post("/api/v1/locations", data);
+    return response.data;
+  },
+
+  updateLocation: async (
+    id: number,
+    data: Partial<Localisation>
+  ): Promise<Localisation> => {
+    const response = await api.put(`/api/v1/locations/${id}`, data);
+    return response.data;
+  },
+
+  deleteLocation: async (id: number): Promise<void> => {
+    await api.delete(`/api/v1/locations/${id}`);
+  },
+
+  // Data Source CRUD operations
+  getDataSources: async (): Promise<DataSource[]> => {
+    const response = await api.get("/api/v1/data-sources");
+    return response.data;
+  },
+
+  createDataSource: async (
+    data: Omit<DataSource, "id">
+  ): Promise<DataSource> => {
+    const response = await api.post("/api/v1/data-sources", data);
+    return response.data;
+  },
+
+  updateDataSource: async (
+    id: number,
+    data: Partial<DataSource>
+  ): Promise<DataSource> => {
+    const response = await api.put(`/api/v1/data-sources/${id}`, data);
+    return response.data;
+  },
+
+  deleteDataSource: async (id: number): Promise<void> => {
+    await api.delete(`/api/v1/data-sources/${id}`);
+  },
+
+  // Get dashboard statistics
+  getDashboardStats: async (): Promise<DashboardStats> => {
+    try {
+      const response = await api.get("/api/v1/epidemics/stats/dashboard");
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch dashboard stats:", error);
+      throw error;
+    }
+  },
+};
+
+export { api };
