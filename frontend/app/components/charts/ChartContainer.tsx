@@ -4,9 +4,10 @@ import { ReactNode, useRef, useEffect } from 'react';
 
 interface ChartContainerProps {
   children: ReactNode;
+  title?: string;
 }
 
-export default function ChartContainer({ children }: ChartContainerProps) {
+export default function ChartContainer({ children, title }: ChartContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -30,20 +31,23 @@ export default function ChartContainer({ children }: ChartContainerProps) {
   }, []);
 
   return (
-    <div
-      ref={containerRef}
-      style={{
-        position: 'relative',
-        width: '100%',
-        height: '400px',
-        maxHeight: '400px',
-        overflow: 'hidden',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}
-    >
-      {children}
+    <div className="flex flex-col w-full">
+      {title && <h3 className="text-lg font-semibold text-gray-800 mb-4">{title}</h3>}
+      <div
+        ref={containerRef}
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '400px',
+          maxHeight: '400px',
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 } 
