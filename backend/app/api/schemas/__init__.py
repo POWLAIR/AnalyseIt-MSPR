@@ -3,7 +3,7 @@
 
 # Le reste du code va utiliser ces imports directement
 from pydantic import BaseModel, HttpUrl
-from typing import Optional, List
+from typing import Optional
 from datetime import date
 
 # Epidemic schemas

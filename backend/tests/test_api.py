@@ -8,7 +8,6 @@ from datetime import date
 from ..app.main import app
 from ..app.core.db import get_db
 from ..app.models.models import Base
-from ..app.schemas import schemas
 
 # Configuration de la base de données de test
 SQLALCHEMY_DATABASE_URL = "sqlite://"
@@ -18,6 +17,7 @@ engine = create_engine(
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
+
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Création des tables pour les tests
@@ -29,6 +29,7 @@ def override_get_db():
         yield db
     finally:
         db.close()
+
 
 app.dependency_overrides[get_db] = override_get_db
 
@@ -115,3 +116,4 @@ def test_health_check():
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "healthy"} 
+    

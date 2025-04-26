@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from ..db.session import get_db
 from ..db.models.base import Localisation
-from typing import List
 import logging
 
 logger = logging.getLogger(__name__)

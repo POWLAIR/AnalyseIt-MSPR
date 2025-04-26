@@ -1,7 +1,6 @@
 import os
 import sys
 import logging
-from sqlalchemy import text
 
 # Ajout du répertoire parent au chemin
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -26,5 +25,7 @@ def init_db():
         logger.error(f"❌ Erreur lors de l'initialisation de la base de données : {str(e)}")
         raise
 
+
 if __name__ == "__main__":
     init_db() 
+    

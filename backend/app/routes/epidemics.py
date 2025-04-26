@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from ..db.session import get_db
-from ..db.models.base import Epidemic, DailyStats, Localisation
-from typing import List, Dict, Optional
+from ..db.models.base import Epidemic, DailyStats
+from typing import Optional
 import logging
 from datetime import datetime, timedelta
 
@@ -34,9 +34,9 @@ def get_epidemics(
         if search:
             search_term = f"%{search}%"
             query = query.filter(
-                (Epidemic.name.ilike(search_term)) |
-                (Epidemic.type.ilike(search_term)) |
-                (Epidemic.country.ilike(search_term))
+                (Epidemic.name.ilike(search_term))
+                | (Epidemic.type.ilike(search_term))
+                | (Epidemic.country.ilike(search_term))
             )
         
         if type and type != "all":
