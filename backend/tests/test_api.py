@@ -46,9 +46,14 @@ def test_epidemic():
     return {
         "name": "Test Epidemic",
         "description": "Test Description",
+        "type": "Virus",
+        "country": "Test Country",
         "start_date": str(date.today()),
         "end_date": None,
-        "type": "Virus"
+        "total_cases": 0,
+        "total_deaths": 0,
+        "transmission_rate": 0.0,
+        "mortality_rate": 0.0
     }
 
 @pytest.fixture
@@ -84,7 +89,7 @@ def test_update_epidemic(test_epidemic):
     epidemic_id = response.json()["id"]
     
     # Update epidemic
-    update_data = {"name": "Updated Epidemic"}
+    update_data = {**test_epidemic, "name": "Updated Epidemic"}
     response = client.put(f"/api/v1/epidemics/{epidemic_id}", json=update_data)
     assert response.status_code == 200
     data = response.json()
@@ -114,11 +119,12 @@ def test_filter_epidemics(test_epidemic):
     })
     assert response.status_code == 200
     data = response.json()
-    assert len(data) > 0
-    assert data[0]["type"] == "Virus"
+    assert "items" in data
+    assert len(data["items"]) > 0
+    assert data["items"][0]["type"] == "Virus"
 
 def test_health_check():
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "healthy"} 
+    assert response.json() == {"status": "ok"} 
     

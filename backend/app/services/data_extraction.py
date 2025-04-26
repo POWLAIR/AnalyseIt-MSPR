@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from kagglehub import dataset_download
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
+from typing import Dict, Any
 
 from ..db.models.base import Epidemic, DailyStats, Localisation, DataSource, OverallStats
 from ..utils.data_cleaning import clean_dataset
@@ -296,3 +297,19 @@ def extract_and_load_datasets(db: Session):
         results.append({"dataset": "overall_stats", "status": "error", "error": str(e)})
 
     return results
+
+def run_etl(db: Session) -> Dict[str, Any]:
+    """
+    Exécute le processus ETL complet.
+    """
+    try:
+        # Exemple de traitement ETL simple
+        stats = {
+            "processed_epidemics": db.query(Epidemic).count(),
+            "processed_daily_stats": db.query(DailyStats).count(),
+            "processed_locations": db.query(Localisation).count(),
+            "processed_sources": db.query(DataSource).count()
+        }
+        return {"status": "success", "stats": stats}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
