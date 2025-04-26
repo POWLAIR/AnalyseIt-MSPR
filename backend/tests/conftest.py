@@ -16,20 +16,20 @@ from app.db.models.base import Base
 # Configuration de la base de données de test en mémoire
 SQLALCHEMY_DATABASE_URL = "sqlite://"
 
-@pytest.fixture(scope="session")
-def engine():
-    engine = create_engine(
-        SQLALCHEMY_DATABASE_URL,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    Base.metadata.create_all(bind=engine)
-    return engine
+# Créer l'engine une seule fois au niveau du module
+test_engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+
+# Créer les tables une seule fois au niveau du module
+Base.metadata.create_all(bind=test_engine)
 
 @pytest.fixture(scope="function")
-def db_session(engine):
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    connection = engine.connect()
+def db_session():
+    connection = test_engine.connect()
     transaction = connection.begin()
     session = TestingSessionLocal(bind=connection)
 
@@ -40,14 +40,27 @@ def db_session(engine):
     connection.close()
 
 @pytest.fixture(scope="function")
-def client(db_session):
-    def override_get_db():
+def override_get_db(db_session):
+    def _override_get_db():
         try:
             yield db_session
         finally:
             pass
+    return _override_get_db
 
+@pytest.fixture(scope="function")
+def client(override_get_db):
+    # Override la dépendance get_db
     app.dependency_overrides[get_db] = override_get_db
+    
+    # Override l'engine de l'application pour utiliser SQLite
+    from app.db import session
+    original_engine = session.engine
+    session.engine = test_engine
+    
     with TestClient(app) as test_client:
         yield test_client
+    
+    # Restaurer l'engine original après les tests
+    session.engine = original_engine
     app.dependency_overrides.clear() 
