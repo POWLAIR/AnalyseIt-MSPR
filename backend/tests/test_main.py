@@ -39,6 +39,13 @@ def test_db_connection(test_client):
     else:
         assert "message" in response.json()
 
+def test_etl_data_integrity():
+    # Exemple de test : vérifie qu'une fonction ETL retourne des données propres
+    from backend.src.etl import run_etl
+    data = run_etl()
+    assert data is not None
+    assert isinstance(data, list)
+    assert all("id" in item for item in data)
 
 def test_extract_data(test_client):
     """Test de l'endpoint pour extraire les données."""
