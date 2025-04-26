@@ -118,8 +118,6 @@ def test_db():
         inspector = inspect(engine)
         tables = inspector.get_table_names()
         return {
-            "status": "success",
-            "result": 1,
             "message": "Database connection successful",
             "tables": tables
         }

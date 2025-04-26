@@ -70,9 +70,13 @@ def test_db_connection(client):
     """Test de connexion à la base de données."""
     response = client.get("/test-db")
     assert response.status_code == 200
-    assert "status" in response.json()
-    assert response.json()["status"] == "success"
-    assert response.json()["result"] == 1
+    data = response.json()
+    assert "message" in data
+    assert data["message"] == "Database connection successful"
+    assert "tables" in data
+    # Vérifier que les tables requises sont présentes
+    required_tables = {"epidemic", "data_source", "localisation", "daily_stats", "overall_stats"}
+    assert required_tables.issubset(set(data["tables"]))
 
 def test_etl_data_integrity(db_session):
     """Test de l'intégrité des données ETL."""
