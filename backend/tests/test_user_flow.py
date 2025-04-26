@@ -1,21 +1,12 @@
-from fastapi.testclient import TestClient
-import sys
-from pathlib import Path
+from datetime import date
 
-# Add the parent directory to sys.path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
-from app.main import app
-
-client = TestClient(app)
-
-def test_full_epidemic_flow():
+def test_full_epidemic_flow(client):
     epidemic = {
         "name": "Test Flow Epidemic",
         "description": "Full test flow",
         "type": "Bacteria",
         "country": "Test Country",
-        "start_date": "2023-01-01",
+        "start_date": str(date.today()),
         "end_date": None,
         "total_cases": 0,
         "total_deaths": 0,
