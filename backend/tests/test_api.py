@@ -4,10 +4,15 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 import pytest
 from datetime import date
+import sys
+from pathlib import Path
 
-from ..app.main import app
-from ..app.core.db import get_db
-from ..app.models.models import Base
+# Add the parent directory to sys.path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
+from app.main import app
+from app.db.session import get_db
+from app.db.models.base import Base
 
 # Configuration de la base de données de test
 SQLALCHEMY_DATABASE_URL = "sqlite://"

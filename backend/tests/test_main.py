@@ -4,10 +4,10 @@ from unittest.mock import patch, MagicMock
 import pandas as pd
 from kagglehub import KaggleDatasetAdapter
 
-# Ajouter le chemin parent au sys.path pour que Python trouve `main.py`
+# Add the parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from main import app  # noqa: E402
+from app.main import app  # noqa: E402
 
 from fastapi.testclient import TestClient
 import pytest
@@ -41,7 +41,7 @@ def test_db_connection(test_client):
 
 def test_etl_data_integrity():
     # Exemple de test : vérifie qu'une fonction ETL retourne des données propres
-    from backend.src.etl import run_etl
+    from app.services.etl import run_etl
     data = run_etl()
     assert data is not None
     assert isinstance(data, list)
