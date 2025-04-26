@@ -13,6 +13,26 @@ jobs:
     name: Lint and Test Backend
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: analyseit_test
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: test_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    env:
+      SQLALCHEMY_DATABASE_URL: mysql+pymysql://test_user:test_password@localhost:3306/analyseit_test
+      TESTING: true
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -35,7 +55,7 @@ jobs:
       - name: Run backend tests
         run: |
           cd backend
-          pytest
+          pytest -v
 
   lint-and-test-frontend:
     name: Lint and Test Frontend
@@ -63,8 +83,8 @@ jobs:
       - name: Run frontend tests
         run: |
           cd frontend
-              npm install
-              npm run test
+          npm install
+          npm run test
 
   build-and-push-docker:
     name: Build and Push Docker Images

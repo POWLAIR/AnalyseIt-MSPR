@@ -1,4 +1,5 @@
 import sys
+import os
 from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
@@ -13,15 +14,22 @@ from app.main import app
 from app.db.session import get_db
 from app.db.models.base import Base
 
-# Configuration de la base de données de test en mémoire
-SQLALCHEMY_DATABASE_URL = "sqlite://"
-
-# Créer l'engine une seule fois au niveau du module
-test_engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
+# Utiliser SQLite en mémoire par défaut, mais permettre l'override via les variables d'environnement
+SQLALCHEMY_DATABASE_URL = os.getenv(
+    'SQLALCHEMY_DATABASE_URL',
+    'sqlite://'
 )
+
+# Créer l'engine en fonction de l'URL
+if SQLALCHEMY_DATABASE_URL.startswith('sqlite'):
+    test_engine = create_engine(
+        SQLALCHEMY_DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+else:
+    test_engine = create_engine(SQLALCHEMY_DATABASE_URL)
+
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
 # Créer les tables une seule fois au niveau du module
@@ -53,7 +61,7 @@ def client(override_get_db):
     # Override la dépendance get_db
     app.dependency_overrides[get_db] = override_get_db
     
-    # Override l'engine de l'application pour utiliser SQLite
+    # Override l'engine de l'application pour utiliser la base de test
     from app.db import session
     original_engine = session.engine
     session.engine = test_engine
