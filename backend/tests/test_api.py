@@ -65,14 +65,14 @@ def test_location():
     }
 
 # Tests
-def test_create_epidemic(test_epidemic):
+def test_create_epidemic(client, test_epidemic):
     response = client.post("/api/v1/epidemics/", json=test_epidemic)
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == test_epidemic["name"]
     assert "id" in data
 
-def test_read_epidemic(test_epidemic):
+def test_read_epidemic(client, test_epidemic):
     # Create test epidemic
     response = client.post("/api/v1/epidemics/", json=test_epidemic)
     epidemic_id = response.json()["id"]
@@ -83,7 +83,7 @@ def test_read_epidemic(test_epidemic):
     data = response.json()
     assert data["name"] == test_epidemic["name"]
 
-def test_update_epidemic(test_epidemic):
+def test_update_epidemic(client, test_epidemic):
     # Create test epidemic
     response = client.post("/api/v1/epidemics/", json=test_epidemic)
     epidemic_id = response.json()["id"]
@@ -95,7 +95,7 @@ def test_update_epidemic(test_epidemic):
     data = response.json()
     assert data["name"] == "Updated Epidemic"
 
-def test_delete_epidemic(test_epidemic):
+def test_delete_epidemic(client, test_epidemic):
     # Create test epidemic
     response = client.post("/api/v1/epidemics/", json=test_epidemic)
     epidemic_id = response.json()["id"]
@@ -108,7 +108,7 @@ def test_delete_epidemic(test_epidemic):
     response = client.get(f"/api/v1/epidemics/{epidemic_id}")
     assert response.status_code == 404
 
-def test_filter_epidemics(test_epidemic):
+def test_filter_epidemics(client, test_epidemic):
     # Create test epidemic
     client.post("/api/v1/epidemics/", json=test_epidemic)
     
@@ -123,7 +123,7 @@ def test_filter_epidemics(test_epidemic):
     assert len(data["items"]) > 0
     assert data["items"][0]["type"] == "Virus"
 
-def test_health_check():
+def test_health_check(client):
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"} 
