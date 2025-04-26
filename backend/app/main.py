@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 from sqlalchemy import inspect
+from fastapi import HTTPException
 
 from .core.config.settings import settings
 from .db.session import engine
@@ -104,6 +105,26 @@ app.include_router(
     prefix=f"{settings.API_V1_STR}/data-sources",
     tags=["Sources de données"]
 )
+
+# Route de test
+@app.get("/test-endpoint")
+def test_endpoint():
+    return {"message": "Le backend fonctionne correctement !"}
+
+# Route de test de la base de données
+@app.get("/test-db")
+def test_db():
+    try:
+        inspector = inspect(engine)
+        tables = inspector.get_table_names()
+        return {
+            "status": "success",
+            "result": 1,
+            "message": "Database connection successful",
+            "tables": tables
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Route de santé
 @app.get("/health")

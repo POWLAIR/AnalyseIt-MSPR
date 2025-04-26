@@ -6,6 +6,7 @@ from ...db.session import engine
 from ...db.models.base import Base
 from ..dependencies import get_db_session
 from ...services.data_extraction import extract_and_load_datasets
+from ...db.session import get_db
 
 # Configurer le logger
 logger = logging.getLogger(__name__)
@@ -66,20 +67,20 @@ async def initialize_database(
             detail=f"Erreur lors de l'initialisation de la base de données: {str(e)}"
         )
 
-@router.get("/extract-data", response_model=dict)
-async def extract_data(db: Session = Depends(get_db_session)):
+@router.get("/extract-data")
+async def extract_data():
     """
-    Extrait les données des datasets Kaggle et les charge dans la base de données.
+    Endpoint pour extraire les données des sources externes.
     """
     try:
-        result = extract_and_load_datasets(db)
-        return result
+        db = next(get_db())
+        try:
+            result = extract_and_load_datasets(db)
+            return {"status": "success", "message": "Data extraction completed", "details": result}
+        finally:
+            db.close()
     except Exception as e:
-        logger.error(f"Erreur lors de l'extraction des données:{str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erreur lors de l'extraction des données: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/run-etl", response_model=dict)
 async def run_etl(

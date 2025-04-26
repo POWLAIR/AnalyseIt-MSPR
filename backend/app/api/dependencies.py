@@ -11,4 +11,4 @@ def get_db_session() -> Generator[Session, None, None]:
     try:
         yield session
     finally:
-        session.close()
+        session.close() 

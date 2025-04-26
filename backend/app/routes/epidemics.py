@@ -6,10 +6,58 @@ from ..db.models.base import Epidemic, DailyStats
 from typing import Optional
 import logging
 from datetime import datetime, timedelta
+from pydantic import BaseModel, validator
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+class EpidemicCreate(BaseModel):
+    name: str
+    description: str
+    type: str
+    country: str
+    start_date: str
+    end_date: Optional[str] = None
+    total_cases: int = 0
+    total_deaths: int = 0
+    transmission_rate: float = 0.0
+    mortality_rate: float = 0.0
+
+    @validator('start_date', 'end_date')
+    def parse_date(cls, v):
+        if v is None:
+            return None
+        try:
+            return datetime.strptime(v, '%Y-%m-%d').date()
+        except ValueError:
+            raise ValueError('Date format must be YYYY-MM-DD')
+
+@router.post("/")
+def create_epidemic(epidemic: EpidemicCreate, db: Session = Depends(get_db)):
+    """
+    Crée une nouvelle épidémie.
+    """
+    try:
+        db_epidemic = Epidemic(
+            name=epidemic.name,
+            description=epidemic.description,
+            type=epidemic.type,
+            country=epidemic.country,
+            start_date=epidemic.start_date,
+            end_date=epidemic.end_date,
+            total_cases=epidemic.total_cases,
+            total_deaths=epidemic.total_deaths,
+            transmission_rate=epidemic.transmission_rate,
+            mortality_rate=epidemic.mortality_rate
+        )
+        db.add(db_epidemic)
+        db.commit()
+        db.refresh(db_epidemic)
+        return db_epidemic
+    except Exception as e:
+        logger.error(f"Erreur lors de la création de l'épidémie: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("")
 @router.get("/")
@@ -241,9 +289,48 @@ def get_epidemic(epidemic_id: int, db: Session = Depends(get_db)):
                 detail="Épidémie non trouvée"
             )
         return epidemic
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Erreur lors de la récupération de l'épidémie: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail="Erreur lors de la récupération de l'épidémie"
-        ) 
+        )
+
+@router.put("/{epidemic_id}")
+def update_epidemic(epidemic_id: int, epidemic: EpidemicCreate, db: Session = Depends(get_db)):
+    """
+    Met à jour une épidémie existante.
+    """
+    try:
+        db_epidemic = db.query(Epidemic).filter(Epidemic.id == epidemic_id).first()
+        if not db_epidemic:
+            raise HTTPException(status_code=404, detail="Épidémie non trouvée")
+
+        for key, value in epidemic.dict().items():
+            setattr(db_epidemic, key, value)
+
+        db.commit()
+        db.refresh(db_epidemic)
+        return db_epidemic
+    except Exception as e:
+        logger.error(f"Erreur lors de la mise à jour de l'épidémie: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/{epidemic_id}")
+def delete_epidemic(epidemic_id: int, db: Session = Depends(get_db)):
+    """
+    Supprime une épidémie.
+    """
+    try:
+        db_epidemic = db.query(Epidemic).filter(Epidemic.id == epidemic_id).first()
+        if not db_epidemic:
+            raise HTTPException(status_code=404, detail="Épidémie non trouvée")
+
+        db.delete(db_epidemic)
+        db.commit()
+        return {"message": "Épidémie supprimée avec succès"}
+    except Exception as e:
+        logger.error(f"Erreur lors de la suppression de l'épidémie: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e)) 
