@@ -16,4 +16,5 @@ class CRUDLocation(CRUDBase[Location, LocationCreate, LocationUpdate]):
     def get_multi_by_region(self, db: Session, *, region: str, skip: int = 0, limit: int = 100) -> List[Location]:
         return db.query(self.model).filter(self.model.region == region).offset(skip).limit(limit).all()
 
+
 location = CRUDLocation(Location) 

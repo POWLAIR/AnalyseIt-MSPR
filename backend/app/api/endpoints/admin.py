@@ -1,18 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query 
 from sqlalchemy.orm import Session
 from sqlalchemy import inspect, text
-import subprocess
-import sys
-import os
 import logging
 from ...db.session import engine
 from ...db.models.base import Base
 from ..dependencies import get_db_session
 from ...services.data_extraction import extract_and_load_datasets
-from fastapi.responses import StreamingResponse
-import asyncio
-import json
-from typing import AsyncGenerator
 
 # Configurer le logger
 logger = logging.getLogger(__name__)
@@ -53,7 +46,6 @@ async def initialize_database(
     """
     try:
         if reset:
-            # Suppression des tables existantes avec notre méthode personnalisée
             logger.info("Réinitialisation complète de la base de données...")
             drop_tables()
         
@@ -83,7 +75,7 @@ async def extract_data(db: Session = Depends(get_db_session)):
         result = extract_and_load_datasets(db)
         return result
     except Exception as e:
-        logger.error(f"Erreur lors de l'extraction des données: {str(e)}")
+        logger.error(f"Erreur lors de l'extraction des données:{str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Erreur lors de l'extraction des données: {str(e)}"
@@ -109,12 +101,12 @@ async def run_etl(
             for epidemic in epidemics:
                 epidemic_repository.delete_epidemic(db, epidemic_id=epidemic.id)
             logger.info("Données existantes supprimées avec succès")
-        
+
         # Extraire et charger les données depuis Kaggle
         logger.info("Extraction et chargement des données depuis Kaggle...")
         result = extract_and_load_datasets(db)
         logger.info("Données chargées avec succès")
-        
+
         return {
             "success": True,
             "message": "Données chargées avec succès! Processus ETL complété.",
@@ -126,4 +118,4 @@ async def run_etl(
         raise HTTPException(
             status_code=500,
             detail=f"Erreur lors du chargement des données: {str(e)}"
-        ) 
+        )

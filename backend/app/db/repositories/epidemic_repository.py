@@ -1,12 +1,15 @@
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from sqlalchemy import desc, func
+import logging
 
-from ..models.base import Epidemic, DailyStats, Localisation, DataSource, OverallStats
+from ..models.base import Epidemic, DailyStats, Localisation, OverallStats
 from ...api.schemas import (
     EpidemicCreate,
     EpidemicUpdate
 )
+
+logger = logging.getLogger(__name__)
 
 def create_epidemic(db: Session, epidemic: EpidemicCreate) -> Epidemic:
     db_epidemic = Epidemic(**epidemic.model_dump())
@@ -16,72 +19,64 @@ def create_epidemic(db: Session, epidemic: EpidemicCreate) -> Epidemic:
     return db_epidemic
 
 def get_epidemic(db: Session, epidemic_id: int) -> Optional[Epidemic]:
-    return db.query(Epidemic).filter(Epidemic.id == epidemic_id).first()
+    try:
+        return db.query(Epidemic).filter(Epidemic.id == epidemic_id).first()
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération de l'épidémie {epidemic_id}: {str(e)}")
+        raise
 
 def get_epidemics(
-    db: Session, 
-    skip: int = 0, 
+    db: Session,
+    skip: int = 0,
     limit: int = 100,
-    filters: Dict[str, Any] = None
+    filters: Optional[Dict[str, Any]] = None
 ) -> List[Epidemic]:
-    query = db.query(Epidemic)
-    
-    if filters:
-        # Filtre par type
-        if filters.get("type"):
-            query = query.filter(Epidemic.type == filters["type"])
+    """
+    Récupère la liste des épidémies avec pagination et filtres optionnels.
+    """
+    try:
+        query = db.query(Epidemic)
         
-        # Filtre par pays
-        if filters.get("country"):
-            query = query.filter(Epidemic.country == filters["country"])
+        if filters:
+            for key, value in filters.items():
+                if hasattr(Epidemic, key) and value is not None:
+                    query = query.filter(getattr(Epidemic, key) == value)
         
-        # Filtre par date de début
-        if filters.get("start_date"):
-            query = query.filter(Epidemic.start_date >= filters["start_date"])
-        
-        # Filtre par date de fin
-        if filters.get("end_date"):
-            query = query.filter(
-                # Soit la date de fin est avant la date spécifiée
-                (Epidemic.end_date.isnot(None) & (Epidemic.end_date <= filters["end_date"])) |
-                # Soit il n'y a pas de date de fin (épidémie en cours)
-                (Epidemic.end_date.is_(None))
-            )
-        
-        # Filtre par statut actif/inactif
-        if filters.get("active") is not None:
-            if filters["active"]:
-                # Épidémies actives (sans date de fin)
-                query = query.filter(Epidemic.end_date.is_(None))
-            else:
-                # Épidémies terminées (avec date de fin)
-                query = query.filter(Epidemic.end_date.isnot(None))
-    
-    # Tri par date de début (plus récent en premier) puis par nom
-    query = query.order_by(desc(Epidemic.start_date), Epidemic.name)
-            
-    return query.offset(skip).limit(limit).all()
+        return query.offset(skip).limit(limit).all()
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération des épidémies: {str(e)}")
+        raise
 
 def update_epidemic(
-    db: Session, 
-    epidemic_id: int, 
+    db: Session,
+    epidemic_id: int,
     epidemic: EpidemicUpdate
 ) -> Optional[Epidemic]:
-    db_epidemic = db.query(Epidemic).filter(Epidemic.id == epidemic_id).first()
-    if db_epidemic:
-        for key, value in epidemic.model_dump(exclude_unset=True).items():
-            setattr(db_epidemic, key, value)
-        db.commit()
-        db.refresh(db_epidemic)
-    return db_epidemic
+    try:
+        db_epidemic = db.query(Epidemic).filter(Epidemic.id == epidemic_id).first()
+        if db_epidemic:
+            for key, value in epidemic.model_dump(exclude_unset=True).items():
+                setattr(db_epidemic, key, value)
+            db.commit()
+            db.refresh(db_epidemic)
+        return db_epidemic
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erreur lors de la mise à jour de l'épidémie {epidemic_id}: {str(e)}")
+        raise
 
 def delete_epidemic(db: Session, epidemic_id: int) -> bool:
-    db_epidemic = db.query(Epidemic).filter(Epidemic.id == epidemic_id).first()
-    if db_epidemic:
-        db.delete(db_epidemic)
-        db.commit()
-        return True
-    return False
+    try:
+        db_epidemic = db.query(Epidemic).filter(Epidemic.id == epidemic_id).first()
+        if db_epidemic:
+            db.delete(db_epidemic)
+            db.commit()
+            return True
+        return False
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erreur lors de la suppression de l'épidémie {epidemic_id}: {str(e)}")
+        raise
 
 def get_epidemic_daily_stats(db: Session, epidemic_id: int) -> List[DailyStats]:
     """
@@ -218,4 +213,44 @@ def get_detailed_epidemic_data(db: Session, skip: int = 0, limit: int = 20) -> L
         
         result.append(epidemic_data)
     
-    return result 
+    return result
+
+def get_epidemic_statistics(db: Session) -> Dict[str, Any]:
+    """
+    Récupère les statistiques globales sur les épidémies.
+    """
+    try:
+        total_epidemics = db.query(func.count(Epidemic.id)).scalar()
+        total_cases = db.query(func.sum(Epidemic.total_cases)).scalar() or 0
+        total_deaths = db.query(func.sum(Epidemic.total_deaths)).scalar() or 0
+        
+        # Calculer le taux de mortalité moyen
+        mortality_rate = (total_deaths / total_cases * 100) if total_cases > 0 else 0
+        
+        # Récupérer les épidémies les plus meurtrières
+        deadliest_epidemics = (
+            db.query(Epidemic)
+            .order_by(desc(Epidemic.total_deaths))
+            .limit(5)
+            .all()
+        )
+        
+        return {
+            "total_epidemics": total_epidemics,
+            "total_cases": total_cases,
+            "total_deaths": total_deaths,
+            "average_mortality_rate": mortality_rate,
+            "deadliest_epidemics": [
+                {
+                    "id": e.id,
+                    "name": e.name,
+                    "total_deaths": e.total_deaths,
+                    "mortality_rate": (e.total_deaths / e.total_cases * 100) if e.total_cases > 0 else 0
+                }
+                for e in deadliest_epidemics
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération des statistiques: {str(e)}")
+        raise 
+    

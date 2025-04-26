@@ -1,5 +1,4 @@
 import logging
-import sys
 from typing import Optional
 from rich.console import Console
 from rich.logging import RichHandler

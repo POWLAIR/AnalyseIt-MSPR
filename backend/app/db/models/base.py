@@ -83,3 +83,4 @@ class OverallStats(Base):
     epidemic = relationship("Epidemic", back_populates="overall_stats")
     
     __table_args__ = (Index('idx_overall_epidemic', id_epidemic),) 
+    

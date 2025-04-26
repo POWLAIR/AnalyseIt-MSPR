@@ -18,7 +18,7 @@ def get_dashboard_overview(db: Session = Depends(get_db)):
     try:
         # Statistiques des épidémies
         total_pandemics = db.query(Epidemic).count()
-        active_pandemics = db.query(Epidemic).filter(Epidemic.end_date == None).count()
+        active_pandemics = db.query(Epidemic).filter(Epidemic.end_date is None).count()
 
         # Calcul des taux moyens
         latest_stats = db.query(

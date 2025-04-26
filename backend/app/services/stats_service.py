@@ -1,8 +1,7 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_, distinct, desc
-from datetime import datetime, timedelta
+from sqlalchemy import func, distinct, desc
 from typing import List, Dict, Any
-from ..db.models.base import Epidemic, DailyStats, Localisation, DataSource, OverallStats
+from ..db.models.base import Epidemic, DailyStats, Localisation
 
 class StatsService:
     def __init__(self, db: Session):

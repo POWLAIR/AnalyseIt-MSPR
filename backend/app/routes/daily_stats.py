@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..db.session import get_db
 from ..db.models.base import DailyStats
-from typing import List
 import logging
 from ..api.schemas import DailyStatsUpdate
 
