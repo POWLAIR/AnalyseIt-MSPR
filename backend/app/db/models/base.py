@@ -14,6 +14,7 @@ class Epidemic(Base):
     end_date = Column(Date)
     type = Column(String(100))
     country = Column(String(100))
+    source = Column(String(255))
     transmission_rate = Column(Float, default=0.0)
     mortality_rate = Column(Float, default=0.0)
     total_cases = Column(Integer, default=0)

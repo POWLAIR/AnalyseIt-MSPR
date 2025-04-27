@@ -5,9 +5,9 @@ from sqlalchemy.pool import StaticPool
 import pytest
 from datetime import date
 
-from ..app.main import app
-from ..app.core.db import get_db
-from ..app.models.models import Base
+from app.main import app
+from app.db.session import get_db
+from app.db.models.base import Base
 
 # Configuration de la base de données de test
 SQLALCHEMY_DATABASE_URL = "sqlite://"
@@ -43,7 +43,9 @@ def test_epidemic():
         "description": "Test Description",
         "start_date": str(date.today()),
         "end_date": None,
-        "type": "Virus"
+        "type": "VIRAL",
+        "country": "Test Country",
+        "source": "Test Source"
     }
 
 @pytest.fixture
@@ -56,15 +58,15 @@ def test_location():
 
 # Tests
 def test_create_epidemic(test_epidemic):
-    response = client.post("/api/v1/epidemics/", json=test_epidemic)
-    assert response.status_code == 200
+    response = client.post("/api/v1/epidemics", json=test_epidemic)
+    assert response.status_code == 201
     data = response.json()
     assert data["name"] == test_epidemic["name"]
     assert "id" in data
 
 def test_read_epidemic(test_epidemic):
     # Create test epidemic
-    response = client.post("/api/v1/epidemics/", json=test_epidemic)
+    response = client.post("/api/v1/epidemics", json=test_epidemic)
     epidemic_id = response.json()["id"]
     
     # Read created epidemic
@@ -75,24 +77,24 @@ def test_read_epidemic(test_epidemic):
 
 def test_update_epidemic(test_epidemic):
     # Create test epidemic
-    response = client.post("/api/v1/epidemics/", json=test_epidemic)
+    response = client.post("/api/v1/epidemics", json=test_epidemic)
     epidemic_id = response.json()["id"]
     
     # Update epidemic
     update_data = {"name": "Updated Epidemic"}
-    response = client.put(f"/api/v1/epidemics/{epidemic_id}", json=update_data)
+    response = client.patch(f"/api/v1/epidemics/{epidemic_id}", json=update_data)
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == "Updated Epidemic"
 
 def test_delete_epidemic(test_epidemic):
     # Create test epidemic
-    response = client.post("/api/v1/epidemics/", json=test_epidemic)
+    response = client.post("/api/v1/epidemics", json=test_epidemic)
     epidemic_id = response.json()["id"]
     
     # Delete epidemic
     response = client.delete(f"/api/v1/epidemics/{epidemic_id}")
-    assert response.status_code == 200
+    assert response.status_code == 204
     
     # Verify deletion
     response = client.get(f"/api/v1/epidemics/{epidemic_id}")
@@ -100,20 +102,21 @@ def test_delete_epidemic(test_epidemic):
 
 def test_filter_epidemics(test_epidemic):
     # Create test epidemic
-    client.post("/api/v1/epidemics/", json=test_epidemic)
+    client.post("/api/v1/epidemics", json=test_epidemic)
     
     # Test filters
-    response = client.get("/api/v1/epidemics/", params={
-        "type": "Virus",
-        "start_date": str(date.today())
+    response = client.get("/api/v1/epidemics", params={
+        "type": "VIRAL",
+        "search": "Test"
     })
     assert response.status_code == 200
     data = response.json()
-    assert len(data) > 0
-    assert data[0]["type"] == "Virus"
+    assert "items" in data
+    assert len(data["items"]) > 0
+    assert data["items"][0]["type"] == "VIRAL"
 
 def test_health_check():
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "healthy"} 
+    assert response.json() == {"status": "ok"} 
     
