@@ -1,3 +1,6 @@
+import pymysql
+pymysql.install_as_MySQLdb()
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.core.config.settings import settings
@@ -20,4 +23,4 @@ def get_db():
     try:
         yield db
     finally:
-        db.close() 
+        db.close()
