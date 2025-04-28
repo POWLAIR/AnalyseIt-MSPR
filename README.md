@@ -84,7 +84,8 @@ Avant de commencer, assurez-vous d'avoir installé :
 Au sein d'un terminal git bash, exécutez la commande suivante :
 
 ```bash
-docker-compose --verbose up --build --no-cache
+docker-compose build --no-cache
+docker-compose up
 ```
 
 3. Les services seront accessibles aux ports suivants :
@@ -135,7 +136,31 @@ Pour exécuter les tests du backend, utilisez :
 docker exec -it backend pytest
 ```
 
+### Frontend
+
+Pour exécuter les tests du frontend, utilisez :
+
+```bash
+docker exec -it frontend npm run test
+```
+
 ---
+## **Linter **
+### Backend
+
+pour linter le backend, utilisez :
+
+```bash
+docker exec -it backend flake8 .
+```
+
+### Frontend
+
+pour linter le frontend, utilisez :
+
+```bash
+docker exec -it frontend npm run lint
+```
 
 ## **Contribution**
 
