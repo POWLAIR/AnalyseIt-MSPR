@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     
     // Appel à l'API backend
     // Attention : en environnement Docker, utilisez le hostname du service backend, pas localhost
-    const backendUrl = 'process.env.NEXT_PUBLIC_API_URL';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL;
     console.log(`Tentative de connexion au backend à l'URL: ${backendUrl}`);
     
     const response = await fetch(`${backendUrl}/api/v1/admin/run-etl?reset=${reset}`, {
