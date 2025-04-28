@@ -7,11 +7,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Récupérer les variables d'environnement avec des valeurs par défaut
-DB_USER = os.getenv("DB_USER", "user")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "password")
-DB_HOST = os.getenv("DB_HOST", "mysql_db")
-DB_PORT = os.getenv("DB_PORT", "3306")
-DB_NAME = os.getenv("DB_NAME", "pandemics_db")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Créer le moteur SQLAlchemy
