@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
-from core.config.settings import settings
+from app.core.config.settings import settings
 
 # Charger les variables d'environnement
 load_dotenv()
