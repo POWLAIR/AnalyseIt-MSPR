@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings
-import os
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
 
@@ -12,12 +12,16 @@ class Settings(BaseSettings):
     DESCRIPTION: str = "API for tracking and analyzing pandemic data"
     
     # Database Configuration
-    DB_DATABASE: str = os.getenv("DB_DATABASE")
- 
+    DATABASE_URL: str = os.getenv("DATABASE_URL") 
+    DB_USER: str = os.getenv("DB_USER", "user")
+    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "password")
+    DB_HOST: str = os.getenv("DB_HOST", "mysql_db")
+    DB_PORT: str = os.getenv("DB_PORT", "3306")
+    DB_NAME: str = os.getenv("DB_NAME", "pandemics_db")
     
     # CORS Configuration
-    BACKEND_CORS_ORIGINS: list = ["*"]  # À configurer en production
-    
+    BACKEND_CORS_ORIGINS: list = ["*"]
+
     # Security
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-here")
     ALGORITHM: str = "HS256"
@@ -25,16 +29,12 @@ class Settings(BaseSettings):
 
     @property
     def SQLALCHEMY_DATABASE_URL(self) -> str:
-        """Construit l'URL de connexion à la base de données."""
-        # Si une URL complète est fournie, l'utiliser
-        if os.getenv("SQLALCHEMY_DATABASE_URL"):
-            return os.getenv("SQLALCHEMY_DATABASE_URL")
-        
-        # Sinon, construire l'URL à partir des composants
-        return self.DB_DATABASE
+        """Construit l'URL finale à utiliser pour SQLAlchemy."""
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
+        return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
     
     class Config:
         case_sensitive = True
 
-
-settings = Settings() 
+settings = Settings()
