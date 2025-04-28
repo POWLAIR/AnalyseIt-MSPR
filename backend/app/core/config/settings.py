@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     DESCRIPTION: str = "API for tracking and analyzing pandemic data"
     
     # Database Configuration
-    DATABASE_URL: str = os.getenv("DATABASE_URL") 
+    DATABASE_URL: str | None = None  # <- Rendre optionnel !
     DB_USER: str = os.getenv("DB_USER", "user")
     DB_PASSWORD: str = os.getenv("DB_PASSWORD", "password")
     DB_HOST: str = os.getenv("DB_HOST", "mysql_db")
@@ -29,7 +29,7 @@ class Settings(BaseSettings):
 
     @property
     def SQLALCHEMY_DATABASE_URL(self) -> str:
-        """Construit l'URL finale à utiliser pour SQLAlchemy."""
+        """Construit l'URL finale pour SQLAlchemy."""
         if self.DATABASE_URL:
             return self.DATABASE_URL
         return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
