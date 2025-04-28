@@ -1,10 +1,9 @@
 # Utilisation d'une image Node.js LTS
 FROM node:18-alpine
 
-# Définition du répertoire de travail
 WORKDIR /app
 
-# Copier les fichiers de configuration
+# Copier les fichiers de config
 COPY package*.json ./
 COPY tsconfig.json ./
 COPY next.config.js ./
@@ -20,21 +19,14 @@ RUN npm install
 # Copier le reste des fichiers
 COPY . .
 
-# Définir NODE_ENV pour le build
+# Définir production
 ENV NODE_ENV=production
 
-# Build l'application
-RUN npm run build
+# Important : ne PAS hardcoder NEXT_PUBLIC_API_URL ici !
 
-# Définir les variables d'environnement pour le runtime
-ENV NEXT_PUBLIC_API_URL=http://localhost:8000
-ENV NODE_ENV=production
-
-# Le reste des fichiers sera monté comme un volume dans docker-compose
-# pour le développement
-
-# Exposer le port utilisé par Next.js
+# Exposer le port
 EXPOSE 3000
 
-# Commande de démarrage pour la production
+# Build + Démarrage séparement
+# Build sera déclenché manuellement avec la bonne variable d'environnement
 CMD ["npm", "start"]
