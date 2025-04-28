@@ -134,3 +134,23 @@ jobs:
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/analyseit-frontend ./frontend
           docker push ${{ secrets.DOCKER_USERNAME }}/analyseit-frontend
+
+  deploy-railway:
+    name: Deploy to Railway
+    runs-on: ubuntu-latest
+    needs: [lint-and-test-backend, lint-and-test-frontend]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          cd backend
+          railway up --service "analyseit-backend"
