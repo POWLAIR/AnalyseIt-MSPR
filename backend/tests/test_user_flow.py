@@ -1,41 +1,81 @@
-from datetime import date
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
-def test_full_epidemic_flow(client):
-    epidemic = {
-        "name": "Test Flow Epidemic",
-        "description": "Full test flow",
-        "type": "Bacteria",
+from app.main import app
+from app.db.session import get_db
+from app.db.models.base import Base
+
+# Configuration de la base de données de test
+SQLALCHEMY_DATABASE_URL = "sqlite://"
+
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Création des tables pour les tests
+Base.metadata.create_all(bind=engine)
+
+def override_get_db():
+    try:
+        db = TestingSessionLocal()
+        yield db
+    finally:
+        db.close()
+
+
+app.dependency_overrides[get_db] = override_get_db
+
+client = TestClient(app)
+
+def test_user_flow():
+    # 1. Créer une épidémie
+    epidemic_data = {
+        "name": "Test Epidemic",
+        "type": "VIRAL",
+        "start_date": "2024-01-01",
         "country": "Test Country",
-        "start_date": str(date.today()),
-        "end_date": None,
-        "total_cases": 0,
-        "total_deaths": 0,
-        "transmission_rate": 0.0,
-        "mortality_rate": 0.0
+        "description": "Test Description",
+        "source": "Test Source"
     }
+    response = client.post("/api/v1/epidemics", json=epidemic_data)
+    assert response.status_code == 201
+    created_epidemic = response.json()
+    epidemic_id = created_epidemic["id"]
 
-    # Création
-    create_resp = client.post("/api/v1/epidemics/", json=epidemic)
-    assert create_resp.status_code == 200
-    created_data = create_resp.json()
-    assert created_data["name"] == epidemic["name"]
+    # 2. Lire l'épidémie créée
+    response = client.get(f"/api/v1/epidemics/{epidemic_id}")
+    assert response.status_code == 200
+    assert response.json()["name"] == epidemic_data["name"]
 
-    # Lecture
-    epidemic_id = created_data["id"]
-    read_resp = client.get(f"/api/v1/epidemics/{epidemic_id}")
-    assert read_resp.status_code == 200
-    assert read_resp.json()["name"] == epidemic["name"]
+    # 3. Mettre à jour l'épidémie
+    update_data = {
+        "name": "Updated Epidemic",
+        "description": "Updated Description"
+    }
+    response = client.patch(f"/api/v1/epidemics/{epidemic_id}", json=update_data)
+    assert response.status_code == 200
+    assert response.json()["name"] == update_data["name"]
 
-    # Mise à jour
-    update_data = {**epidemic, "name": "Updated Flow Epidemic"}
-    update_resp = client.put(f"/api/v1/epidemics/{epidemic_id}", json=update_data)
-    assert update_resp.status_code == 200
-    assert update_resp.json()["name"] == "Updated Flow Epidemic"
+    # 4. Filtrer les épidémies
+    response = client.get("/api/v1/epidemics", params={
+        "type": "VIRAL",
+        "search": "Test"
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert "items" in data
+    assert len(data["items"]) > 0
 
-    # Suppression
-    delete_resp = client.delete(f"/api/v1/epidemics/{epidemic_id}")
-    assert delete_resp.status_code == 200
+    # 5. Supprimer l'épidémie
+    response = client.delete(f"/api/v1/epidemics/{epidemic_id}")
+    assert response.status_code == 204
 
-    # Vérification de la suppression
-    verify_resp = client.get(f"/api/v1/epidemics/{epidemic_id}")
-    assert verify_resp.status_code == 404
+    # 6. Vérifier que l'épidémie a été supprimée
+    response = client.get(f"/api/v1/epidemics/{epidemic_id}")
+    assert response.status_code == 404

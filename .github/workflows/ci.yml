@@ -87,6 +87,20 @@ jobs:
         run: |
           cd frontend
           npm install
+          npm install -D postcss-import autoprefixer tailwindcss @tailwindcss/forms
+
+      - name: Verify PostCSS config
+        run: |
+          cd frontend
+          if [ ! -f postcss.config.js ]; then
+            echo "module.exports = {
+              plugins: {
+                'postcss-import': {},
+                'tailwindcss': {},
+                'autoprefixer': {},
+              }
+            }" > postcss.config.js
+          fi
 
       - name: Lint frontend
         run: |
@@ -96,7 +110,6 @@ jobs:
       - name: Run frontend tests
         run: |
           cd frontend
-          npm install
           npm run test
 
   build-and-push-docker:

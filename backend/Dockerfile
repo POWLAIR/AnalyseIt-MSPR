@@ -1,11 +1,18 @@
 # Utiliser une image Python légère
-FROM python:3.12-slim
+FROM python:3.10-slim
 
 # Définir le dossier de travail
 WORKDIR /app
 
 # Installer wget (nécessaire pour le script d'attente)
 RUN apt-get update && apt-get install -y wget
+
+# Installer les dépendances système
+RUN apt-get update && apt-get install -y \
+    gcc \
+    default-libmysqlclient-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copier les fichiers nécessaires
 COPY requirements.txt .
@@ -19,6 +26,9 @@ RUN wget -O /wait-for-it.sh https://raw.githubusercontent.com/vishnubob/wait-for
 
 # Copier le code source de l'API
 COPY . .
+
+# Ajouter le répertoire racine au PYTHONPATH
+ENV PYTHONPATH=/app
 
 # Créer un script de démarrage
 RUN echo '#!/bin/bash\n\

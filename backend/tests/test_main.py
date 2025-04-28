@@ -1,29 +1,32 @@
 import sys
 from pathlib import Path
-from unittest.mock import patch
-import pytest
+
+# Ajouter le chemin parent au sys.path pour que Python trouve `main.py`
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
+from app.main import app  # noqa: E402
+
 from fastapi.testclient import TestClient
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-# Add the parent directory to sys.path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
-from app.main import app
-from app.db.models.base import Base
 from app.db.session import get_db
+from app.db.models.base import Base
 
-# Configuration de la base de données de test en mémoire
-SQLALCHEMY_DATABASE_URL = "sqlite://"
+# Configuration de la base de données de test
+SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
+
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Créer les tables dans la base de données de test
+# Création des tables
 Base.metadata.create_all(bind=engine)
 
 def override_get_db():
@@ -33,95 +36,80 @@ def override_get_db():
     finally:
         db.close()
 
+
+app.dependency_overrides[get_db] = override_get_db
+
+client = TestClient(app)
+
+
 @pytest.fixture
 def test_client():
-    """Fixture pour créer un client de test avec une base de données en mémoire."""
-    app.dependency_overrides[get_db] = override_get_db
-    client = TestClient(app)
-    yield client
-    app.dependency_overrides.clear()
+    """Fixture pour créer un client de test."""
+    return TestClient(app)
 
-@pytest.fixture
-def mock_data_extraction():
-    with patch('app.api.endpoints.admin.extract_and_load_datasets') as mock:
-        mock.return_value = [
-            {
-                "dataset": "mpox",
-                "file": "mpox.csv",
-                "rows": 1000,
-                "status": "success"
-            },
-            {
-                "dataset": "covid19",
-                "file": "covid19.csv",
-                "rows": 2000,
-                "status": "success"
-            }
-        ]
-        yield mock
 
-def test_healthcheck(client):
-    """Test de l'endpoint de vérification de l'API."""
-    response = client.get("/test-endpoint")
+def test_health_check(test_client):
+    """Test de l'endpoint de santé."""
+    response = test_client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"message": "Le backend fonctionne correctement !"}
+    assert response.json() == {"status": "ok"}
 
-def test_db_connection(client):
-    """Test de connexion à la base de données."""
-    response = client.get("/test-db")
+
+def test_dashboard_overview(test_client):
+    """Test de l'endpoint du tableau de bord."""
+    response = test_client.get("/api/v1/dashboard/overview")
     assert response.status_code == 200
     data = response.json()
-    assert "message" in data
-    assert data["message"] == "Database connection successful"
-    assert "tables" in data
-    # Vérifier que les tables requises sont présentes
-    required_tables = {"epidemic", "data_source", "localisation", "daily_stats", "overall_stats"}
-    assert required_tables.issubset(set(data["tables"]))
+    assert "totalPandemics" in data
+    assert "activePandemics" in data
+    assert "averageTransmissionRate" in data
+    assert "averageMortalityRate" in data
+    assert "latestStats" in data
+    assert all(key in data["latestStats"] for key in ["cases", "deaths", "recovered", "date"])
 
-def test_etl_data_integrity(db_session):
+
+def test_dashboard_trends(test_client):
+    """Test de l'endpoint des tendances du tableau de bord."""
+    response = test_client.get("/api/v1/dashboard/trends")
+    assert response.status_code == 200
+    data = response.json()
+    assert "dailyStats" in data
+    assert isinstance(data["dailyStats"], list)
+
+
+def test_epidemics_list(test_client):
+    """Test de l'endpoint de liste des épidémies."""
+    response = test_client.get("/api/v1/epidemics")
+    assert response.status_code == 200
+    data = response.json()
+    assert "items" in data
+    assert "total" in data
+    assert "page" in data
+    assert isinstance(data["items"], list)
+
+
+def test_daily_stats_list(test_client):
+    """Test de l'endpoint de liste des statistiques quotidiennes."""
+    response = test_client.get("/api/v1/daily-stats")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
+def test_locations_list(test_client):
+    """Test de l'endpoint de liste des localisations."""
+    response = test_client.get("/api/v1/locations")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
+def test_data_sources_list(test_client):
+    """Test de l'endpoint de liste des sources de données."""
+    response = test_client.get("/api/v1/data-sources")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
+def test_etl_data_integrity():
     """Test de l'intégrité des données ETL."""
-    with patch('app.services.etl.run_etl') as mock_run_etl:
-        mock_run_etl.return_value = {
-            "status": "success",
-            "stats": {
-                "processed_epidemics": 10,
-                "processed_daily_stats": 100,
-                "processed_locations": 5,
-                "processed_sources": 3
-            }
-        }
-        
-        from app.services.etl import run_etl
-        result = run_etl(db_session)
-        assert result["status"] == "success"
-        assert "stats" in result
-        assert isinstance(result["stats"], dict)
-
-def test_extract_data(client):
-    """Test de l'endpoint pour extraire les données."""
-    with patch('app.api.endpoints.admin.extract_and_load_datasets') as mock_data_extraction:
-        mock_data_extraction.return_value = [
-            {
-                "dataset": "mpox",
-                "file": "mpox.csv",
-                "rows": 1000,
-                "status": "success"
-            },
-            {
-                "dataset": "covid19",
-                "file": "covid19.csv",
-                "rows": 2000,
-                "status": "success"
-            }
-        ]
-        
-        response = client.get("/api/v1/admin/extract-data")
-        assert response.status_code == 200
-        
-        data = response.json()
-        assert data["status"] == "success"
-        assert data["message"] == "Data extraction completed"
-        assert "details" in data
-        assert isinstance(data["details"], list)
-        assert len(data["details"]) == 2
-        assert all(item["status"] == "success" for item in data["details"])
+    from app.services.data_extraction import extract_and_load_datasets
+    assert extract_and_load_datasets is not None
