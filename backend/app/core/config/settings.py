@@ -25,9 +25,19 @@ class Settings(BaseSettings):
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-here")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
+    @property
+    def SQLALCHEMY_DATABASE_URL(self) -> str:
+        """Construit l'URL de connexion à la base de données."""
+        # Si une URL complète est fournie, l'utiliser
+        if os.getenv("SQLALCHEMY_DATABASE_URL"):
+            return os.getenv("SQLALCHEMY_DATABASE_URL")
+        
+        # Sinon, construire l'URL à partir des composants
+        return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
     
-class Config:
-    case_sensitive = True
+    class Config:
+        case_sensitive = True
 
 
 settings = Settings() 

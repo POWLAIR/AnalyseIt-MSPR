@@ -13,6 +13,33 @@ jobs:
     name: Lint and Test Backend
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpassword
+          MYSQL_DATABASE: pandemics_db
+          MYSQL_USER: user
+          MYSQL_PASSWORD: password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DB_USER: user
+      DB_PASSWORD: password
+      DB_HOST: localhost
+      DB_PORT: 3306
+      DB_NAME: pandemics_db
+      SECRET_KEY: "your-secret-key-here"
+      PYTHONPATH: /app
+      SQLALCHEMY_DATABASE_URL: mysql+pymysql://user:password@localhost:3306/pandemics_db
+      TESTING: true
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -27,6 +54,12 @@ jobs:
           cd backend
           pip install -r requirements.txt
 
+      - name: Wait for MySQL
+        run: |
+          while ! mysqladmin ping -h"127.0.0.1" -P"3306" --silent; do
+            sleep 1
+          done
+
       - name: Lint backend
         run: |
           cd backend
@@ -35,7 +68,7 @@ jobs:
       - name: Run backend tests
         run: |
           cd backend
-          pytest
+          pytest -v
 
   lint-and-test-frontend:
     name: Lint and Test Frontend
