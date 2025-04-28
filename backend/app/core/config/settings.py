@@ -12,8 +12,11 @@ class Settings(BaseSettings):
     DESCRIPTION: str = "API for tracking and analyzing pandemic data"
     
     # Database Configuration
-    DB_DATABASE: str = os.getenv("DB_DATABASE")
- 
+    DB_USER: str = os.getenv("DB_USER", "user")
+    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "password")
+    DB_HOST: str = os.getenv("DB_HOST", "mysql_db")
+    DB_PORT: str = os.getenv("DB_PORT", "3306")
+    DB_NAME: str = os.getenv("DB_NAME", "pandemics_db")
     
     # CORS Configuration
     BACKEND_CORS_ORIGINS: list = ["*"]  # À configurer en production
@@ -31,7 +34,7 @@ class Settings(BaseSettings):
             return os.getenv("SQLALCHEMY_DATABASE_URL")
         
         # Sinon, construire l'URL à partir des composants
-        return self.DB_DATABASE
+        return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
     
     class Config:
         case_sensitive = True
